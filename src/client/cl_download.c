@@ -451,12 +451,16 @@ CL_RequestNextDownload(void)
 
 				if (n & 1)
 				{
-					Com_sprintf(fn, sizeof(fn), "env/%s%s.pcx",
+					// HERETIC2 == m8!
+					Com_sprintf(fn, sizeof(fn), "pics/Skies/%s%s.m8",
+					//Com_sprintf(fn, sizeof(fn), "env/%s%s.pcx",
 							cl.configstrings[CS_SKY], env_suf[n / 2]);
 				}
 				else
 				{
-					Com_sprintf(fn, sizeof(fn), "env/%s%s.tga",
+					// HERETIC2 == m8!
+					Com_sprintf(fn, sizeof(fn), "pics/Skies/%s%s.m8",
+					//Com_sprintf(fn, sizeof(fn), "env/%s%s.tga",
 							cl.configstrings[CS_SKY], env_suf[n / 2]);
 				}
 
@@ -488,7 +492,9 @@ CL_RequestNextDownload(void)
 			{
 				char fn[MAX_OSPATH];
 
-				sprintf(fn, "textures/%s.wal",
+				// HERETIC2 == m8!
+				sprintf(fn, "textures/%s.m8",
+				//sprintf(fn, "textures/%s.wal",
 						map_surfaces[precache_tex++].rname);
 
 				if (!CL_CheckOrDownloadFile(fn))
