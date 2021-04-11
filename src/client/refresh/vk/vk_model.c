@@ -1236,6 +1236,9 @@ static void Mod_LoadSpriteModel (model_t *mod, void *buffer, int modfilelen)
 
 //=============================================================================
 
+static qboolean Mod_Load_IQM(model_t *mod);
+static qboolean Mod_Load_MD2(model_t *mod, qboolean crash);
+
 /*
 ==================
 Mod_ForName
@@ -1246,8 +1249,7 @@ Loads in a model for the given name
 static model_t *Mod_ForName (char *name, model_t *parent_model, qboolean crash)
 {
 	model_t	*mod;
-	unsigned *buf;
-	int		i, modfilelen;
+	int		i;
 
 	if (!name[0])
 	{
@@ -1292,6 +1294,23 @@ static model_t *Mod_ForName (char *name, model_t *parent_model, qboolean crash)
 	}
 	strcpy (mod->name, name);
 
+	if (Mod_Load_IQM(mod))
+	{
+		return mod;
+	}
+
+	if (Mod_Load_MD2(mod, crash))
+	{
+		return mod;
+	}
+	return NULL;
+}
+
+static qboolean Mod_Load_MD2(model_t *mod, qboolean crash)
+{
+	int		modfilelen;
+	unsigned	*buf;
+
 	//
 	// load the file
 	//
@@ -1309,7 +1328,7 @@ static model_t *Mod_ForName (char *name, model_t *parent_model, qboolean crash)
 			R_Printf(PRINT_ALL, "%s: Can't load %s\n", __func__, mod->name);
 		}
 		memset (mod->name, 0, sizeof(mod->name));
-		return NULL;
+		return false;
 	}
 
 	// update count of loaded models
@@ -1349,7 +1368,53 @@ static model_t *Mod_ForName (char *name, model_t *parent_model, qboolean crash)
 
 	ri.FS_FreeFile(buf);
 
-	return mod;
+	return true;
+}
+
+static qboolean Mod_Load_IQM(model_t *mod)
+{
+	int	len;
+	char namewe[256];
+	const char* ext;
+
+	if (!mod->name)
+	{
+		return false;
+	}
+
+	ext = COM_FileExtension(mod->name);
+	if(!ext[0])
+	{
+		/* file has no extension */
+		return false;
+	}
+
+	len = strlen(mod->name);
+
+	/* Remove the extension */
+	memset(namewe, 0, 256);
+	memcpy(namewe, mod->name, len - (strlen(ext) + 1));
+
+	if (len < 5)
+	{
+		return 0;
+	}
+
+	if (!strcmp(ext, "md2"))
+	{
+		char filename[MAX_QPATH];
+
+		Q_strlcpy(filename, namewe, sizeof(filename));
+
+		/* Add the extension */
+		Q_strlcat(filename, ".", sizeof(filename));
+		Q_strlcat(filename, "iqm", sizeof(filename));
+
+		Com_Printf("%s load iqm?\n", filename);
+
+	}
+
+	return false;
 }
 
 /*
