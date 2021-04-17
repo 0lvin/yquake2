@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // vk_model.c -- model loading and caching
 
 #include "header/local.h"
+#include "../files/iqm.h"
 
 YQ2_ALIGNAS_TYPE(int) static byte mod_novis[MAX_MAP_LEAFS/8];
 
@@ -1400,20 +1401,133 @@ static qboolean Mod_Load_IQM(model_t *mod)
 		return 0;
 	}
 
-	if (!strcmp(ext, "md2"))
+	if (strcmp(ext, "md2"))
 	{
-		char filename[MAX_QPATH];
-
-		Q_strlcpy(filename, namewe, sizeof(filename));
-
-		/* Add the extension */
-		Q_strlcat(filename, ".", sizeof(filename));
-		Q_strlcat(filename, "iqm", sizeof(filename));
-
-		Com_Printf("%s load iqm?\n", filename);
-
+		return false;
 	}
 
+	char filename[MAX_QPATH];
+	int		modfilelen;
+	unsigned	*buf;
+
+	Q_strlcpy(filename, namewe, sizeof(filename));
+
+	/* Add the extension */
+	Q_strlcat(filename, ".", sizeof(filename));
+	Q_strlcat(filename, "iqm", sizeof(filename));
+
+	//
+	// load the file
+	//
+	modfilelen = ri.FS_LoadFile (filename, (void **)&buf);
+	if (!buf && modfilelen <=0)
+	{
+		return false;
+	}
+
+	// update count of loaded models
+	mod_loaded ++;
+	if (vk_validation->value)
+	{
+		R_Printf(PRINT_ALL, "%s: Load %s[%d]\n",
+			__func__, filename, mod_loaded);
+	}
+
+	{
+		struct iqmheader *header;
+
+		header = ( struct iqmheader * )buf;
+
+		// check IQM magic
+		if( memcmp( header->magic, "INTERQUAKEMODEL", 16 ) ) {
+			R_Printf(PRINT_ALL, "%s: %s is not an Inter-Quake Model\n",
+				__func__, mod->name );
+
+			ri.FS_FreeFile(buf);
+			mod_loaded --;
+			return false;
+		}
+
+		// check header version
+		header->version = LittleLong( header->version );
+		if( header->version != IQM_VERSION ) {
+			R_Printf(PRINT_ALL, "%s: %s has wrong type number (%i should be %i)\n",
+				__func__, mod->name, header->version, IQM_VERSION );
+
+			ri.FS_FreeFile(buf);
+			mod_loaded --;
+			return false;
+		}
+
+		// byteswap header
+#define H_SWAP( s ) ( header->s = LittleLong( header->s ) )
+		H_SWAP( filesize );
+		H_SWAP( flags );
+		H_SWAP( num_text );
+		H_SWAP( ofs_text );
+		H_SWAP( num_meshes );
+		H_SWAP( ofs_meshes );
+		H_SWAP( num_vertexarrays );
+		H_SWAP( num_vertexes );
+		H_SWAP( ofs_vertexarrays );
+		H_SWAP( num_triangles );
+		H_SWAP( ofs_triangles );
+		H_SWAP( ofs_adjacency );
+		H_SWAP( num_joints );
+		H_SWAP( ofs_joints );
+		H_SWAP( num_poses );
+		H_SWAP( ofs_poses );
+		H_SWAP( num_anims );
+		H_SWAP( ofs_anims );
+		H_SWAP( num_frames );
+		H_SWAP( num_framechannels );
+		H_SWAP( ofs_frames );
+		H_SWAP( ofs_bounds );
+		H_SWAP( num_comment );
+		H_SWAP( ofs_comment );
+		H_SWAP( num_extensions );
+		H_SWAP( ofs_extensions );
+#undef H_SWAP
+
+		if( header->num_joints != header->num_poses ) {
+			R_Printf(PRINT_ALL, "%s: %s has an invalid number of poses: %i vs %i\n",
+				__func__, mod->name, header->num_joints, header->num_poses );
+
+			ri.FS_FreeFile(buf);
+			mod_loaded --;
+			return false;
+		}
+
+		size_t filesize;
+		uint8_t *pbase;
+
+		pbase = ( uint8_t * )buf;
+		filesize = header->filesize;
+
+		// check data offsets against the modfilelen
+		if( header->ofs_text + header->num_text > filesize
+			|| header->ofs_vertexarrays + header->num_vertexarrays * sizeof( struct iqmvertexarray ) > filesize
+			|| header->ofs_joints + header->num_joints * sizeof( struct iqmjoint ) > filesize
+			|| header->ofs_frames + header->num_frames * header->num_framechannels * sizeof( unsigned short ) > filesize
+			|| header->ofs_triangles + header->num_triangles * sizeof( int[3] ) > filesize
+			|| header->ofs_meshes + header->num_meshes * sizeof( struct iqmmesh ) > filesize
+			|| header->ofs_bounds + header->num_frames * sizeof( struct iqmbounds ) > filesize
+		) {
+
+			R_Printf(PRINT_ALL, "%s: %s has invalid size or offset information\n",
+				__func__, mod->name );
+
+			ri.FS_FreeFile(buf);
+			mod_loaded --;
+			return false;
+		}
+
+		R_Printf(PRINT_ALL, "%s load iqm?\n", filename);
+	}
+
+	ri.FS_FreeFile(buf);
+
+	mod_loaded --;
 	return false;
 }
 
