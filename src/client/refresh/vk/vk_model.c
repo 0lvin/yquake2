@@ -1237,76 +1237,6 @@ static void Mod_LoadSpriteModel (model_t *mod, void *buffer, int modfilelen)
 
 //=============================================================================
 
-static qboolean Mod_Load_IQM(model_t *mod);
-static qboolean Mod_Load_MD2(model_t *mod, qboolean crash);
-
-/*
-==================
-Mod_ForName
-
-Loads in a model for the given name
-==================
-*/
-static model_t *Mod_ForName (char *name, model_t *parent_model, qboolean crash)
-{
-	model_t	*mod;
-	int		i;
-
-	if (!name[0])
-	{
-		ri.Sys_Error(ERR_DROP, "%s: NULL name", __func__);
-	}
-
-	//
-	// inline models are grabbed only from worldmodel
-	//
-	if (name[0] == '*' && parent_model)
-	{
-		i = atoi(name+1);
-		if (i < 1 || i >= parent_model->numsubmodels)
-			ri.Sys_Error (ERR_DROP, "bad inline model number");
-		return &parent_model->submodels[i];
-	}
-
-	//
-	// search the currently loaded models
-	//
-	for (i=0 , mod=models_known ; i<mod_numknown ; i++, mod++)
-	{
-		if (!mod->name[0])
-			continue;
-		if (!strcmp (mod->name, name) )
-			return mod;
-	}
-
-	//
-	// find a free model slot spot
-	//
-	for (i=0 , mod=models_known ; i<mod_numknown ; i++, mod++)
-	{
-		if (!mod->name[0])
-			break;	// free spot
-	}
-	if (i == mod_numknown)
-	{
-		if (mod_numknown == models_known_max)
-			ri.Sys_Error(ERR_DROP, "%s: mod_numknown == models_known_max", __func__);
-		mod_numknown++;
-	}
-	strcpy (mod->name, name);
-
-	if (Mod_Load_IQM(mod))
-	{
-		return mod;
-	}
-
-	if (Mod_Load_MD2(mod, crash))
-	{
-		return mod;
-	}
-	return NULL;
-}
-
 static qboolean Mod_Load_MD2(model_t *mod, qboolean crash)
 {
 	int		modfilelen;
@@ -1529,6 +1459,73 @@ static qboolean Mod_Load_IQM(model_t *mod)
 
 	mod_loaded --;
 	return false;
+}
+
+/*
+==================
+Mod_ForName
+
+Loads in a model for the given name
+==================
+*/
+static model_t *Mod_ForName (char *name, model_t *parent_model, qboolean crash)
+{
+	model_t	*mod;
+	int		i;
+
+	if (!name[0])
+	{
+		ri.Sys_Error(ERR_DROP, "%s: NULL name", __func__);
+	}
+
+	//
+	// inline models are grabbed only from worldmodel
+	//
+	if (name[0] == '*' && parent_model)
+	{
+		i = atoi(name+1);
+		if (i < 1 || i >= parent_model->numsubmodels)
+			ri.Sys_Error (ERR_DROP, "bad inline model number");
+		return &parent_model->submodels[i];
+	}
+
+	//
+	// search the currently loaded models
+	//
+	for (i=0 , mod=models_known ; i<mod_numknown ; i++, mod++)
+	{
+		if (!mod->name[0])
+			continue;
+		if (!strcmp (mod->name, name) )
+			return mod;
+	}
+
+	//
+	// find a free model slot spot
+	//
+	for (i=0 , mod=models_known ; i<mod_numknown ; i++, mod++)
+	{
+		if (!mod->name[0])
+			break;	// free spot
+	}
+	if (i == mod_numknown)
+	{
+		if (mod_numknown == models_known_max)
+			ri.Sys_Error(ERR_DROP, "%s: mod_numknown == models_known_max", __func__);
+		mod_numknown++;
+	}
+	strcpy (mod->name, name);
+
+	if (Mod_Load_IQM(mod))
+	{
+		return mod;
+	}
+
+	if (Mod_Load_MD2(mod, crash))
+	{
+		return mod;
+	}
+	return NULL;
 }
 
 /*
