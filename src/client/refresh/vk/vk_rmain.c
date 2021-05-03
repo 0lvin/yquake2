@@ -1329,8 +1329,6 @@ static qboolean RE_Init( void )
 	// print device information during startup
 	Vk_Strings_f();
 
-	QVk_PostInit();
-
 	R_Printf(PRINT_ALL, "Successfully initialized Vulkan!\n");
 
 	return true;
@@ -1346,7 +1344,7 @@ static qboolean RE_Init( void )
 static void RE_ShutdownContext( void )
 {
 	// Shutdown Vulkan subsystem
-	QVk_Shutdown();
+	QVk_WaitAndShutdownAll();
 }
 
 /*
@@ -1375,6 +1373,51 @@ RE_BeginFrame( float camera_separation )
 {
 	// world has not rendered yet
 	world_rendered = false;
+
+	/* VK hasn't been initialized yet. I'm pretty sure that
+	   we can't get here without having called QVk_Init(), 
+	   but better save than sorry. */
+	if (!vk_initialized)
+	{
+		vk_frameStarted = false;
+		return;
+	}
+
+	/* Some GPU drivers set a maximum extent size of 0x0 when
+	   the window is minimized. But a swapchain with an extent
+	   size of 0x0 is invalid. This leads to the following
+	   problem:
+
+	   1. The window is minimized, the extent size changes and
+	      the Vulkan state get's corrupted. QVk_EndFrame()
+	      above or QVk_BeginFrame() below detect the Vulkan
+	      state as corrupted, set vk_frameStated to false and
+	      request a restart by setting vk_restartNeeded to
+	      true.
+	   2. RE_EndFrame() triggers the restart. QVk_Shutdown()
+	      is successfull, but QVk_Init() can't create a valid
+	      swapchains and errors out. An incomplete internal
+	      renderer state is left behind. The only way out is
+	      to trigger a full render restart.
+	   3. The full renderer restart would lead to a restart
+	      loop: Restart -> QVk_Init() fails -> restart -> ...
+	      The only alternative is not to restart. Instead the
+	      renderer could error out, that would print an error
+	      message and quit the client.
+	  
+	    Work around this by not starting the frame or restarting
+	    the renderer, as long as the maximum extent size is 0x0.
+	    This is part 1 (the state corruption war detect in the
+	    last frame), part 2 (the state corruption was detected in
+	    the current frame) is in RE_EndFrame(). */
+	if (vk_restartNeeded)
+	{
+		if (!QVk_CheckExtent())
+		{
+			vk_frameStarted = false;
+			return;
+		}
+	}
 
 	// if ri.Sys_Error() had been issued mid-frame, we might end up here without properly submitting the image, so call QVk_EndFrame to be safe
 	if (QVk_EndFrame(true) != VK_SUCCESS)
@@ -1425,10 +1468,16 @@ RE_EndFrame( void )
 	// world has not rendered yet
 	world_rendered = false;
 
+	/* Part two of the 'maximum extent size may be 0x0'
+	 * work around. See the explanation in RE_BeginFrame()
+	 * for details. */
 	if (vk_restartNeeded)
 	{
-		QVk_Restart();
-		vk_restartNeeded = false;
+		if (QVk_CheckExtent())
+		{
+			QVk_Restart();
+			vk_restartNeeded = false;
+		}
 	}
 }
 
@@ -1584,6 +1633,8 @@ RE_InitContext(void *win)
 		R_Printf(PRINT_ALL, "%s() - could not initialize Vulkan!\n", __func__);
 		return false;
 	}
+
+	QVk_PostInit();
 
 	return true;
 }

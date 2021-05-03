@@ -125,6 +125,8 @@ static int vk_activeStagingBuffer = 0;
 qboolean vk_frameStarted = false;
 // the renderer needs to be restarted.
 qboolean vk_restartNeeded = false;
+// is QVk initialized?
+qboolean vk_initialized = false;
 
 // render pipelines
 qvkpipeline_t vk_drawTexQuadPipeline[RP_COUNT]    = {
@@ -1517,6 +1519,11 @@ static void DestroyStagingBuffer(qvkstagingbuffer_t *dstBuffer)
 */
 void QVk_Shutdown( void )
 {
+	if (!vk_initialized)
+	{
+		return;
+	}
+
 	if (vk_instance != VK_NULL_HANDLE)
 	{
 		R_Printf(PRINT_ALL, "Shutting down Vulkan\n");
@@ -1652,6 +1659,11 @@ void QVk_SetWindow(SDL_Window *window)
 
 void QVk_WaitAndShutdownAll (void)
 {
+	if (!vk_initialized)
+	{
+		return;
+	}
+
 	if (vk_device.logical != VK_NULL_HANDLE)
 	{
 		vkDeviceWaitIdle(vk_device.logical);
@@ -1662,6 +1674,9 @@ void QVk_WaitAndShutdownAll (void)
 	Vk_ShutdownImages();
 	Mesh_Free();
 	QVk_Shutdown();
+
+	vk_frameStarted = false;
+	vk_initialized = false;
 }
 
 void QVk_Restart(void)
@@ -2037,6 +2052,9 @@ qboolean QVk_Init(void)
 		VK_OBJECT_TYPE_DESCRIPTOR_SET, "Descriptor Set: World Color Buffer");
 	QVk_DebugSetObjectName((uint64_t)vk_colorbufferWarp.descriptorSet,
 		VK_OBJECT_TYPE_DESCRIPTOR_SET, "Descriptor Set: Warp Postprocess Color Buffer");
+
+	vk_frameStarted = false;
+	vk_initialized = true;
 	return true;
 }
 
@@ -2053,9 +2071,19 @@ VkResult QVk_BeginFrame(const VkViewport* viewport, const VkRect2D* scissor)
 
 	ReleaseSwapBuffers();
 
-	VkResult result = vkAcquireNextImageKHR(vk_device.logical, vk_swapchain.sc, UINT32_MAX, vk_imageAvailableSemaphores[vk_activeBufferIdx], VK_NULL_HANDLE, &vk_imageIndex);
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_SURFACE_LOST_KHR)
+	static int restartcount;
+	VkResult result = vkAcquireNextImageKHR(vk_device.logical, vk_swapchain.sc, 500000000, vk_imageAvailableSemaphores[vk_activeBufferIdx], VK_NULL_HANDLE, &vk_imageIndex);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_SURFACE_LOST_KHR || result == VK_TIMEOUT)
 	{
+		if (restartcount > 2)
+		{
+			Sys_Error("%s(): tried to restart 3 times after vkAcquireNextImageKHR: %s", __func__, QVk_GetError(result));
+		}
+		else
+		{
+			restartcount++;
+		}
+
 		// for VK_OUT_OF_DATE_KHR and VK_SUBOPTIMAL_KHR it'd be fine to just rebuild the swapchain but let's take the easy way out and restart Vulkan.
 		R_Printf(PRINT_ALL, "%s(): received %s after vkAcquireNextImageKHR - restarting video!\n", __func__, QVk_GetError(result));
 		return result;
@@ -2065,6 +2093,7 @@ VkResult QVk_BeginFrame(const VkViewport* viewport, const VkRect2D* scissor)
 		Sys_Error("%s(): unexpected error after vkAcquireNextImageKHR: %s", __func__, QVk_GetError(result));
 	}
 
+	restartcount = 0;
 	vk_activeCmdbuffer = vk_commandbuffers[vk_activeBufferIdx];
 
 	// swap dynamic buffers
