@@ -1453,12 +1453,16 @@ static qboolean Mod_Load_IQM(model_t *mod)
 		}
 
 		R_Printf(PRINT_ALL, "%s load iqm?\n", filename);
+
+		mod->type = mod_brush;
+		mod->numframes = 0;
 	}
 
 	ri.FS_FreeFile(buf);
 
-	mod_loaded --;
-	return false;
+	//mod_loaded --;
+	//return false;
+	return true;
 }
 
 /*
