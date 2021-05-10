@@ -1429,9 +1429,7 @@ static qboolean Mod_Load_IQM(model_t *mod)
 		}
 
 		size_t filesize;
-		uint8_t *pbase;
 
-		pbase = ( uint8_t * )buf;
 		filesize = header->filesize;
 
 		// check data offsets against the modfilelen
@@ -1456,12 +1454,60 @@ static qboolean Mod_Load_IQM(model_t *mod)
 
 		mod->type = mod_brush;
 		mod->numframes = 0;
+
+		// vertexes
+		struct iqmvertexarray *vas = (struct iqmvertexarray *)(buf+ header->ofs_vertexarrays);
+		for(int i = 0; i < (int)header->num_vertexarrays; i++)
+		{
+			struct iqmvertexarray *va = vas + i;
+
+			R_Printf(PRINT_ALL, "%s: %s load %d item\n",
+				__func__, mod->name, va->type);
+
+			switch(va->type)
+			{
+				case IQM_POSITION:
+				{
+					dvertex_t	*in;
+					mvertex_t	*out;
+					int			i, count;
+
+					if(va->format != IQM_FLOAT || va->size != 3)
+					{
+						return false;
+					}
+
+					if (va->offset + header->num_vertexes * sizeof(*in) > filesize)
+					{
+						return false;
+					}
+
+					in = (void *)(buf + va->offset);
+
+					count = header->num_vertexes;
+					out = Hunk_Alloc ( count*sizeof(*out));
+
+					mod->vertexes = out;
+					mod->numvertexes = count;
+
+					for ( i=0 ; i<count ; i++, in++, out++)
+					{
+						out->position[0] = LittleFloat (in->point[0]);
+						out->position[1] = LittleFloat (in->point[1]);
+						out->position[2] = LittleFloat (in->point[2]);
+					}
+
+					R_Printf(PRINT_ALL, "%s: %s has %d vertexes\n",
+						__func__, mod->name, count);
+
+					break;
+				}
+			}
+		}
 	}
 
 	ri.FS_FreeFile(buf);
 
-	//mod_loaded --;
-	//return false;
 	return true;
 }
 
