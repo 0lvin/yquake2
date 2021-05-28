@@ -61,44 +61,75 @@ static menulist_s s_msaa_list;
 static menuaction_s s_defaults_action;
 static menuaction_s s_apply_action;
 
-static int
-GetRenderer(void)
+// --------
+
+// gl1, gl3, vk, soft
+#define MAXRENDERERS 4
+
+typedef struct
 {
-	/* First element in array is 'OpenGL 1.4' aka gl1.
-	   Second element in array is 'OpenGL 3.2' aka gl3.
-	   Third element in array is unknown renderer. */
-	if (Q_stricmp(vid_renderer->string, "gl1") == 0)
+	const char *boxstr;
+	const char *cvarstr;
+} renderer;
+
+renderer rendererlist[MAXRENDERERS];
+int numrenderer;
+
+static void
+Renderer_FillRenderdef(void)
+{
+	numrenderer = -1;
+
+	if (VID_HasRenderer("gl1"))
 	{
-		return 0;
+		numrenderer++;
+		rendererlist[numrenderer].boxstr = "[OpenGL 1.4]";
+		rendererlist[numrenderer].cvarstr = "gl1";
 	}
-	else if (Q_stricmp(vid_renderer->string, "gl3") == 0)
+
+	if (VID_HasRenderer("gl3"))
 	{
-		return 1;
+		numrenderer++;
+		rendererlist[numrenderer].boxstr = "[OpenGL 3.2]";
+		rendererlist[numrenderer].cvarstr = "gl3";
 	}
-#ifdef USE_REFVK
-	else if (Q_stricmp(vid_renderer->string, "vk") == 0)
+
+	if (VID_HasRenderer("vk"))
 	{
-		return 2;
+		numrenderer++;
+		rendererlist[numrenderer].boxstr = "[Vulkan    ]";
+		rendererlist[numrenderer].cvarstr = "vk";
 	}
-	else if (Q_stricmp(vid_renderer->string, "soft") == 0)
+
+	if (VID_HasRenderer("soft"))
 	{
-		return 3;
+		numrenderer++;
+		rendererlist[numrenderer].boxstr = "[Software  ]";
+		rendererlist[numrenderer].cvarstr = "soft";
 	}
-	else
-	{
-		return 4;
-	}
-#else
-	else if (Q_stricmp(vid_renderer->string, "soft") == 0)
-	{
-		return 2;
-	}
-	else
-	{
-		return 3;
-	}
-#endif
+
+	// The custom renderer. Must be known to the menu,
+	// but nothing more. The display string is hard
+	// coded below, the cvar is unknown.
+	numrenderer++;
 }
+
+static int
+Renderer_GetRenderer(void)
+{
+	for (int i = 0; i < numrenderer; i++)
+	{
+		if (strcmp(vid_renderer->string, rendererlist[i].cvarstr) == 0)
+		{
+			return i;
+		}
+	}
+
+	// Unknown renderer.
+	return numrenderer;
+}
+
+// --------
 
 static int
 GetCustomValue(menulist_s *list)
@@ -151,39 +182,16 @@ ApplyChanges(void *unused)
 	qboolean restart = false;
 
 	/* Renderer */
-	if (s_renderer_list.curvalue != GetRenderer())
+	if (s_renderer_list.curvalue != Renderer_GetRenderer())
 	{
-		/*  First element in array is 'OpenGL 1.4' aka gl1.
-			Second element in array is 'OpenGL 3.2' aka gl3.
-			Third element in array is unknown renderer. */
-		if (s_renderer_list.curvalue == 0)
+		// The custom renderer (the last known renderer) cannot be
+		// set, because the menu doesn't know it's cvar value. TODO:
+		// Hack something that it cannot be selected.
+		if (s_renderer_list.curvalue != numrenderer)
 		{
-			Cvar_Set("vid_renderer", "gl1");
+			Cvar_Set("vid_renderer", (char *)rendererlist[s_renderer_list.curvalue].cvarstr);
 			restart = true;
 		}
-		else if (s_renderer_list.curvalue == 1)
-		{
-			Cvar_Set("vid_renderer", "gl3");
-			restart = true;
-		}
-#ifdef USE_REFVK
-		else if (s_renderer_list.curvalue == 2)
-		{
-			Cvar_Set("vid_renderer", "vk");
-			restart = true;
-		}
-		else if (s_renderer_list.curvalue == 3)
-		{
-			Cvar_Set("vid_renderer", "soft");
-			restart = true;
-		}
-#else
-		else if (s_renderer_list.curvalue == 2)
-		{
-			Cvar_Set("vid_renderer", "soft");
-			restart = true;
-		}
-#endif
 	}
 
 	/* auto mode */
@@ -296,16 +304,17 @@ VID_MenuInit(void)
 {
 	int y = 0;
 
-	static const char *renderers[] = {
-			"[OpenGL 1.4]",
-			"[OpenGL 3.2]",
-#ifdef USE_REFVK
-			"[Vulkan    ]",
-#endif
-			"[Software  ]",
-			CUSTOM_MODE_NAME,
-			0
-	};
+    // Renderer selection box.
+	// MAXRENDERERS + Custom + NULL.
+	static const char *renderers[MAXRENDERERS + 2] = { NULL };
+    Renderer_FillRenderdef();
+
+	for (int i = 0; i < numrenderer; i++)
+	{
+		renderers[i] = rendererlist[i].boxstr;
+	}
+
+	renderers[numrenderer] = CUSTOM_MODE_NAME;
 
 	// must be kept in sync with vid_modes[] in vid.c
 	static const char *resolutions[] = {
@@ -448,7 +457,7 @@ VID_MenuInit(void)
 	s_renderer_list.generic.x = 0;
 	s_renderer_list.generic.y = (y = 0);
 	s_renderer_list.itemnames = renderers;
-	s_renderer_list.curvalue = GetRenderer();
+	s_renderer_list.curvalue = Renderer_GetRenderer();
 
 	s_mode_list.generic.type = MTYPE_SPINCONTROL;
 	s_mode_list.generic.name = "video mode";

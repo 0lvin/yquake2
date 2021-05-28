@@ -303,6 +303,41 @@ qboolean ref_active = false;
 // Renderer restart type requested.
 ref_restart_t restart_state = RESTART_UNDEF;
 
+// Renderer lib extension.
+#ifdef __APPLE__
+const char* lib_ext = "dylib";
+#elif defined(_WIN32)
+const char* lib_ext = "dll";
+#else
+const char* lib_ext = "so";
+#endif
+
+/*
+ * Returns platform specific path to a renderer lib.
+ */
+static void
+VID_GetRendererLibPath(const char *renderer, char *path, size_t len)
+{
+	snprintf(path, len, "%sref_%s.%s", Sys_GetBinaryDir(), renderer, lib_ext);
+}
+
+/*
+ * Checks if a renderer DLL is available.
+ */
+qboolean
+VID_HasRenderer(const char *renderer)
+{
+	char reflib_path[MAX_OSPATH] = {0};
+	VID_GetRendererLibPath(renderer, reflib_path, sizeof(reflib_path));
+
+	if (Sys_IsFile(reflib_path))
+	{
+		return true;
+	}
+
+	return false;
+}
+
 /*
  * Called by the renderer to request a restart.
  */
@@ -355,14 +390,6 @@ VID_LoadRenderer(void)
 	refimport_t	ri;
 	GetRefAPI_t	GetRefAPI;
 
-#ifdef __APPLE__
-	const char* lib_ext = "dylib";
-#elif defined(_WIN32)
-	const char* lib_ext = "dll";
-#else
-	const char* lib_ext = "so";
-#endif
-
 	char reflib_name[64] = {0};
 	char reflib_path[MAX_OSPATH] = {0};
 
@@ -374,8 +401,16 @@ VID_LoadRenderer(void)
 	Com_Printf("----- refresher initialization -----\n");
 
 	snprintf(reflib_name, sizeof(reflib_name), "ref_%s.%s", vid_renderer->string, lib_ext);
-	snprintf(reflib_path, sizeof(reflib_path), "%s%s", Sys_GetBinaryDir(), reflib_name);
+	VID_GetRendererLibPath(vid_renderer->string, reflib_path, sizeof(reflib_path));
 	Com_Printf("Loading library: %s\n", reflib_name);
+
+	// Check if the renderer libs exists.
+	if (!VID_HasRenderer(vid_renderer->string))
+	{
+        Com_Printf("Library %s cannot be found!\n", reflib_name);
+
+		return false;
+	}
 
 	// Mkay, let's load the requested renderer.
 	GetRefAPI = Sys_LoadLibrary(reflib_path, "GetRefAPI", &reflib_handle);
@@ -384,7 +419,7 @@ VID_LoadRenderer(void)
 	// caller to recover from this.
 	if (GetRefAPI == NULL)
 	{
-		Com_Printf("Loading %s as renderer lib failed!", reflib_path);
+		Com_Printf("Loading %s as renderer lib failed!\n", reflib_name);
 
 		return false;
 	}
@@ -489,8 +524,10 @@ VID_CheckChanges(void)
 		// Mkay, let's try our luck.
 		while (!VID_LoadRenderer())
 		{
-			// We try: vk -> gl3 -> gl1 -> soft.
-			if (strcmp(vid_renderer->string, "vk") == 0)
+			// We try: custom -> gl3 -> gl1 -> soft.
+			if ((strcmp(vid_renderer->string, "gl3") != 0) &&
+				(strcmp(vid_renderer->string, "gl1") != 0) &&
+				(strcmp(vid_renderer->string, "soft") != 0))
 			{
 				Com_Printf("Retrying with gl3...\n");
 				Cvar_Set("vid_renderer", "gl3");
@@ -509,12 +546,6 @@ VID_CheckChanges(void)
 			{
 				// Sorry, no usable renderer found.
 				Com_Error(ERR_FATAL, "No usable renderer found!\n");
-			}
-			else
-			{
-				// User forced something stupid.
-				Com_Printf("Retrying with gl3...\n");
-				Cvar_Set("vid_renderer", "gl3");
 			}
 		}
 
