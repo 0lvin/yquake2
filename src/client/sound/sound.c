@@ -327,6 +327,42 @@ S_LoadSound(sfx_t *s)
 		s->is_silenced_muzzle_flash = true;
 	}
 
+	/* update sound volume */
+	{
+		info.volume = 0;
+		int sound_length = info.samples * info.channels;
+		if (sound_length > (2 << 15))
+		{
+			/* too long sound */
+			sound_length = 2 << 15;
+		}
+		if (info.width == 2)
+		{
+			short *sound_data = (short *)(data + info.dataofs);
+			short *sound_end = sound_data + sound_length;
+			while (sound_data < sound_end)
+			{
+				info.volume += abs(*sound_data);
+				sound_data ++;
+			}
+		}
+		else if (info.width == 1)
+		{
+			byte *sound_data = (byte *)(data + info.dataofs);
+			byte *sound_end = sound_data + sound_length;
+			while (sound_data < sound_end)
+			{
+				// normilize to 16bit sound;
+				info.volume += abs(*sound_data) << 8;
+				sound_data ++;
+			}
+		}
+		if (sound_length != 0)
+		{
+			info.volume /= sound_length;
+		}
+	}
+
 #if USE_OPENAL
 	if (sound_started == SS_OAL)
 	{
@@ -893,7 +929,10 @@ S_StartSound(vec3_t origin, int entnum, int entchannel, sfx_t *sfx,
 		dir_y = 16 * orientation[1] * direction[1];
 		dir_z = 16 * orientation[2] * direction[2];
 
-		Haptic_Feedback(sfx->name, 16 - distance_direction / 32, dir_x, dir_y, dir_z);
+		Haptic_Feedback(
+			sfx->name, 16 - distance_direction / 32,
+			sfx->cache ? sfx->cache->volume / 256 : -1,
+			dir_x, dir_y, dir_z);
 	}
 
 	ps->entnum = entnum;

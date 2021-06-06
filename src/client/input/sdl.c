@@ -1191,7 +1191,7 @@ IN_Haptic_Effects_Shutdown(void)
  *    name - sound file name
  */
 void
-Haptic_Feedback(char *name, int effect_volume, int effect_x, int effect_y, int effect_z)
+Haptic_Feedback(char *name, int effect_volume, int sound_volume, int effect_x, int effect_y, int effect_z)
 {
 	int effect_type = HAPTIC_EFFECT_UNKNOWN;
 
@@ -1300,6 +1300,8 @@ Haptic_Feedback(char *name, int effect_volume, int effect_x, int effect_y, int e
 
 	if (effect_type != HAPTIC_EFFECT_UNKNOWN)
 	{
+		Com_Printf("%s: volume %d\n", name,  sound_volume);
+
 		// check last effect for reuse
 		if (last_haptic_efffect[last_haptic_efffect_pos].effect_type != effect_type ||
 		    last_haptic_efffect[last_haptic_efffect_pos].effect_volume != effect_volume ||

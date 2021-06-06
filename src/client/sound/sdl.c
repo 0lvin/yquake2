@@ -940,6 +940,7 @@ SDL_Cache(sfx_t *sfx, wavinfo_t *info, byte *data)
 	sc->stereo = info->channels - 1;
 	sc->length = (int)(info->samples / stepscale);
 	sc->speed = sound.speed;
+	sc->volume = info->volume;
 
 	if ((int)(info->samples / stepscale) == 0)
 	{

@@ -55,6 +55,7 @@ typedef struct
 #endif
 	int stereo;
 	byte data[1];
+	int volume;
 } sfxcache_t;
 
 /*
@@ -142,6 +143,8 @@ typedef struct
 	int loopstart;
 	int samples;
 	int dataofs; /* chunk starts this many bytes from file start */
+	// sound volume
+	int volume;
 } wavinfo_t;
 
 /*

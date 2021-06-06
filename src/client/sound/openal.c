@@ -202,6 +202,7 @@ AL_UploadSfx(sfx_t *s, wavinfo_t *s_info, byte *data)
 	sc->size = size;
 	sc->bufnum = name;
 	sc->stereo = s_info->channels - 1;
+	sc->volume = s_info->volume;
 
 	return sc;
 }
