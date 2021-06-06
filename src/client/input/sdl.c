@@ -1036,7 +1036,7 @@ IN_Haptic_Effects_To_Id(int haptic_effect, int effect_volume, int effect_duratio
 		return -1;
 	}
 
-	int hapric_volume = joy_haptic_magnitude->value * effect_volume * 16; // * 128 = 32767 max strength;
+	int hapric_volume = joy_haptic_magnitude->value * effect_volume; // 32767 max strength;
 
 	if (hapric_volume > 255)
 	{
@@ -1194,7 +1194,7 @@ IN_Haptic_Effects_Shutdown(void)
 
 /*
  * Haptic Feedback:
- *    effect_volume=0..16
+ *    effect_volume=0..256
  *    effect{x,y,z} - effect direction
  *    name - sound file name
  */
