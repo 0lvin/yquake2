@@ -944,13 +944,12 @@ S_StartSound(vec3_t origin, int entnum, int entchannel, sfx_t *sfx,
 				effect_duration /= 2;
 			}
 
-			effect_volume = sfx->cache->volume / 256;
+			effect_volume = sfx->cache->volume / 16;
 		}
 
 		Haptic_Feedback(
-			sfx->name, (16 - distance_direction / 32) * 16,
-			effect_volume, effect_duration,
-			dir_x, dir_y, dir_z);
+			sfx->name, (16 - distance_direction / 32) * effect_volume,
+			effect_duration, dir_x, dir_y, dir_z);
 	}
 
 	ps->entnum = entnum;
