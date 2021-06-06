@@ -255,7 +255,7 @@ S_LoadSound(sfx_t *s)
 	byte *data = NULL;
 	wavinfo_t info;
 	sfxcache_t *sc;
-	int sound_volume = 0; // short * 2 << 15
+	double sound_volume = 0; // short * short * 2 << 15
 	char *name;
 
 	if (s->name[0] == '*')
@@ -343,7 +343,8 @@ S_LoadSound(sfx_t *s)
 			short *sound_end = sound_data + sound_length;
 			while (sound_data < sound_end)
 			{
-				sound_volume += abs(*sound_data);
+				short sound_sample = *sound_data;
+				sound_volume += (sound_sample * sound_sample);
 				sound_data ++;
 			}
 		}
@@ -353,14 +354,16 @@ S_LoadSound(sfx_t *s)
 			byte *sound_end = sound_data + sound_length;
 			while (sound_data < sound_end)
 			{
+				short sound_sample = *sound_data << 8;
 				// normilize to 16bit sound;
-				sound_volume += abs(*sound_data) << 8;
+				sound_volume += (sound_sample * sound_sample);
 				sound_data ++;
 			}
 		}
 		if (sound_length != 0)
 		{
 			sound_volume /= sound_length;
+			sound_volume = sqrtf(sound_volume);
 		}
 	}
 
