@@ -54,8 +54,8 @@ typedef struct
 	int bufnum;
 #endif
 	int stereo;
+	short volume;
 	byte data[1];
-	int volume;
 } sfxcache_t;
 
 /*
@@ -143,8 +143,6 @@ typedef struct
 	int loopstart;
 	int samples;
 	int dataofs; /* chunk starts this many bytes from file start */
-	// sound volume
-	int volume;
 } wavinfo_t;
 
 /*
@@ -254,7 +252,7 @@ void SDL_ClearBuffer(void);
  * Caches an sample for use
  * the SDL backend
  */
-qboolean SDL_Cache(sfx_t *sfx, wavinfo_t *info, byte *data);
+qboolean SDL_Cache(sfx_t *sfx, wavinfo_t *info, byte *data, short volume);
 
 /*
  * Performs all sound calculations
@@ -306,7 +304,7 @@ void AL_Shutdown(void);
  * Upload ("cache") one sample
  * into OpenAL
  */
-sfxcache_t *AL_UploadSfx(sfx_t *s, wavinfo_t *s_info, byte *data);
+sfxcache_t *AL_UploadSfx(sfx_t *s, wavinfo_t *s_info, byte *data, short volume);
 
 /*
  * Deletes one sample from OpenAL

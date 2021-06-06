@@ -255,6 +255,7 @@ S_LoadSound(sfx_t *s)
 	byte *data = NULL;
 	wavinfo_t info;
 	sfxcache_t *sc;
+	int sound_volume = 0; // short * 2 << 15
 	char *name;
 
 	if (s->name[0] == '*')
@@ -329,7 +330,7 @@ S_LoadSound(sfx_t *s)
 
 	/* update sound volume */
 	{
-		info.volume = 0;
+		sound_volume = 0;
 		int sound_length = info.samples * info.channels;
 		if (sound_length > (2 << 15))
 		{
@@ -342,7 +343,7 @@ S_LoadSound(sfx_t *s)
 			short *sound_end = sound_data + sound_length;
 			while (sound_data < sound_end)
 			{
-				info.volume += abs(*sound_data);
+				sound_volume += abs(*sound_data);
 				sound_data ++;
 			}
 		}
@@ -353,27 +354,27 @@ S_LoadSound(sfx_t *s)
 			while (sound_data < sound_end)
 			{
 				// normilize to 16bit sound;
-				info.volume += abs(*sound_data) << 8;
+				sound_volume += abs(*sound_data) << 8;
 				sound_data ++;
 			}
 		}
 		if (sound_length != 0)
 		{
-			info.volume /= sound_length;
+			sound_volume /= sound_length;
 		}
 	}
 
 #if USE_OPENAL
 	if (sound_started == SS_OAL)
 	{
-		sc = AL_UploadSfx(s, &info, data + info.dataofs);
+		sc = AL_UploadSfx(s, &info, data + info.dataofs, sound_volume);
 	}
 	else
 #endif
 	{
 		if (sound_started == SS_SDL)
 		{
-			if (!SDL_Cache(s, &info, data + info.dataofs))
+			if (!SDL_Cache(s, &info, data + info.dataofs, sound_volume))
 			{
 				Com_Printf("Pansen!\n");
 				FS_FreeFile(data);
@@ -1248,10 +1249,10 @@ S_SoundList(void)
 		{
 			size = sc->length * sc->width * (sc->stereo + 1);
 			total += size;
-			Com_Printf("%s(%2db) %8i(%d ch) : %s\n",
+			Com_Printf("%s(%2db) %8i(%d ch) %2.1f dB %s\n",
 					sc->loopstart != -1 ? "L" : " ",
 					sc->width * 8, size,
-					(sc->stereo + 1), sfx->name);
+					(sc->stereo + 1), 10 * log10((float)sc->volume / (2 << 15)), sfx->name);
 		}
 		else
 		{
