@@ -906,6 +906,8 @@ S_StartSound(vec3_t origin, int entnum, int entchannel, sfx_t *sfx,
 		vec3_t orientation, direction;
 		vec_t distance_direction;
 		int dir_x, dir_y, dir_z;
+		int effect_duration = 0;
+		int effect_volume = -1;
 
 		VectorSubtract(listener_forward, listener_up, orientation);
 
@@ -929,9 +931,21 @@ S_StartSound(vec3_t origin, int entnum, int entchannel, sfx_t *sfx,
 		dir_y = 16 * orientation[1] * direction[1];
 		dir_z = 16 * orientation[2] * direction[2];
 
+		if (sfx->cache)
+		{
+			effect_duration = sfx->cache->length;
+
+			if (sfx->cache->stereo)
+			{
+				effect_duration /= 2;
+			}
+
+			effect_volume = sfx->cache->volume / 256;
+		}
+
 		Haptic_Feedback(
 			sfx->name, 16 - distance_direction / 32,
-			sfx->cache ? sfx->cache->volume / 256 : -1,
+			effect_volume, effect_duration,
 			dir_x, dir_y, dir_z);
 	}
 

@@ -105,6 +105,7 @@ enum QHARPICTYPES {
 struct hapric_effects_cache {
 	int effect_type;
 	int effect_volume;
+	int effect_duration;
 	int effect_id;
 	int effect_x;
 	int effect_y;
@@ -1028,7 +1029,7 @@ IN_Haptic_Effect_Init(int effect_x, int effect_y, int effect_z, int period, int 
 }
 
 static int
-IN_Haptic_Effects_To_Id(int haptic_effect, int effect_volume, int effect_x, int effect_y, int effect_z)
+IN_Haptic_Effects_To_Id(int haptic_effect, int effect_volume, int effect_duration, int effect_x, int effect_y, int effect_z)
 {
 	if ((SDL_HapticQuery(joystick_haptic) & SDL_HAPTIC_SINE)==0)
 	{
@@ -1044,6 +1045,11 @@ IN_Haptic_Effects_To_Id(int haptic_effect, int effect_volume, int effect_x, int 
 	else if (hapric_volume < 0)
 	{
 		hapric_volume = 0;
+	}
+
+	if (effect_duration <= 0)
+	{
+		return -1;
 	}
 
 	switch(haptic_effect) {
@@ -1144,6 +1150,7 @@ IN_Haptic_Effects_Init(void)
 		last_haptic_efffect[i].effect_type = HAPTIC_EFFECT_UNKNOWN;
 		last_haptic_efffect[i].effect_id = -1;
 		last_haptic_efffect[i].effect_volume = 0;
+		last_haptic_efffect[i].effect_duration = 0;
 		last_haptic_efffect[i].effect_x = 0;
 		last_haptic_efffect[i].effect_y = 0;
 		last_haptic_efffect[i].effect_z = 0;
@@ -1176,6 +1183,7 @@ IN_Haptic_Effects_Shutdown(void)
 	{
 		last_haptic_efffect[i].effect_type = HAPTIC_EFFECT_UNKNOWN;
 		last_haptic_efffect[i].effect_volume = 0;
+		last_haptic_efffect[i].effect_duration = 0;
 		last_haptic_efffect[i].effect_x = 0;
 		last_haptic_efffect[i].effect_y = 0;
 		last_haptic_efffect[i].effect_z = 0;
@@ -1191,7 +1199,7 @@ IN_Haptic_Effects_Shutdown(void)
  *    name - sound file name
  */
 void
-Haptic_Feedback(char *name, int effect_volume, int sound_volume, int effect_x, int effect_y, int effect_z)
+Haptic_Feedback(char *name, int effect_volume, int sound_volume, int effect_duration, int effect_x, int effect_y, int effect_z)
 {
 	int effect_type = HAPTIC_EFFECT_UNKNOWN;
 
@@ -1201,6 +1209,11 @@ Haptic_Feedback(char *name, int effect_volume, int sound_volume, int effect_x, i
 	}
 
 	if (effect_volume <= 0)
+	{
+		return;
+	}
+
+	if (effect_duration <= 0)
 	{
 		return;
 	}
@@ -1300,11 +1313,12 @@ Haptic_Feedback(char *name, int effect_volume, int sound_volume, int effect_x, i
 
 	if (effect_type != HAPTIC_EFFECT_UNKNOWN)
 	{
-		Com_Printf("%s: volume %d\n", name,  sound_volume);
+		Com_Printf("%s: volume %d[%d]:%d ms\n", name,  sound_volume, effect_volume, effect_duration);
 
 		// check last effect for reuse
 		if (last_haptic_efffect[last_haptic_efffect_pos].effect_type != effect_type ||
 		    last_haptic_efffect[last_haptic_efffect_pos].effect_volume != effect_volume ||
+		    last_haptic_efffect[last_haptic_efffect_pos].effect_duration != effect_duration ||
 		    last_haptic_efffect[last_haptic_efffect_pos].effect_x != effect_x ||
 		    last_haptic_efffect[last_haptic_efffect_pos].effect_y != effect_y ||
 		    last_haptic_efffect[last_haptic_efffect_pos].effect_z != effect_z)
@@ -1313,12 +1327,14 @@ Haptic_Feedback(char *name, int effect_volume, int sound_volume, int effect_x, i
 			last_haptic_efffect_pos = (last_haptic_efffect_pos+1) % last_haptic_efffect_size;
 			IN_Haptic_Effect_Shutdown(&last_haptic_efffect[last_haptic_efffect_pos].effect_id);
 			last_haptic_efffect[last_haptic_efffect_pos].effect_volume = effect_volume;
+			last_haptic_efffect[last_haptic_efffect_pos].effect_duration = effect_duration;
 			last_haptic_efffect[last_haptic_efffect_pos].effect_type = effect_type;
 			last_haptic_efffect[last_haptic_efffect_pos].effect_x = effect_x;
 			last_haptic_efffect[last_haptic_efffect_pos].effect_y = effect_y;
 			last_haptic_efffect[last_haptic_efffect_pos].effect_z = effect_z;
 			last_haptic_efffect[last_haptic_efffect_pos].effect_id = IN_Haptic_Effects_To_Id(
-				effect_type, effect_volume, effect_x, effect_y, effect_z);
+				effect_type, effect_volume, effect_duration,
+				effect_x, effect_y, effect_z);
 		}
 
 		SDL_HapticRunEffect(joystick_haptic, last_haptic_efffect[last_haptic_efffect_pos].effect_id, 1);
