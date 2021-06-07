@@ -255,7 +255,7 @@ S_LoadSound(sfx_t *s)
 	byte *data = NULL;
 	wavinfo_t info;
 	sfxcache_t *sc;
-	double sound_volume = 0; // short * short * 2 << 15
+	double sound_volume = 0;
 	char *name;
 
 	if (s->name[0] == '*')
@@ -332,11 +332,6 @@ S_LoadSound(sfx_t *s)
 	{
 		sound_volume = 0;
 		int sound_length = info.samples * info.channels;
-		if (sound_length > (2 << 15))
-		{
-			/* too long sound */
-			sound_length = 2 << 15;
-		}
 		if (info.width == 2)
 		{
 			short *sound_data = (short *)(data + info.dataofs);

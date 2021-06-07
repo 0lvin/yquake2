@@ -94,7 +94,6 @@ enum QHARPICTYPES {
 	HAPTIC_EFFECT_PALANX,
 	HAPTIC_EFFECT_IONRIPPER,
 	HAPTIC_EFFECT_ETFRIFLE,
-	HAPTIC_EFFECT_SHOTGUN2,
 	HAPTIC_EFFECT_TRACKER,
 	HAPTIC_EFFECT_PAIN,
 	HAPTIC_EFFECT_STEP,
@@ -1006,8 +1005,7 @@ IN_Haptic_Effect_Init(int effect_x, int effect_y, int effect_z, int period, int 
 	{
 		Com_Printf("? %d + %d + %d = %d\n", attack, length, fade, period);
 
-		period -= length;
-		length = 0;
+		length = attack = fade = period / 3;
 	}
 
 	/* limit magnitude */
@@ -1068,64 +1066,60 @@ IN_Haptic_Effects_To_Id(int haptic_effect, int effect_volume, int effect_duratio
 		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
 		                             200/* 0.2 seconds long */, 100/* Takes 0.1 second to get max strength */,
 		                             100/* Takes 0.1 second to fade away */);
-	case HAPTIC_EFFECT_PAIN: /* 458 ms */
+	case HAPTIC_EFFECT_PAIN: /* 391 ms */
 		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
-		                             300/* 0.3 seconds long */, 200/* Takes 0.2 second to get max strength */,
-		                             200/* Takes 0.2 second to fade away */);
+		                             190/* 0.19 seconds long */, 100/* Takes 0.1 second to get max strength */,
+		                             100/* Takes 0.1 second to fade away */);
 	case HAPTIC_EFFECT_BLASTER: /* 473 ms */
 		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
 		                             200/* 0.2 seconds long */, 100/* Takes 0.1 second to get max strength */,
 		                             100/* Takes 0.1 second to fade away */);
-	case HAPTIC_EFFECT_HYPER_BLASTER:
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, 500/* 500 ms*/, hapric_volume,
-		                             200/* 0.2 seconds long */, 100/* Takes 0.1 second to get max strength */,
-		                             100/* Takes 0.1 second to fade away */);
-	case HAPTIC_EFFECT_ETFRIFLE:
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, 500/* 500 ms*/, hapric_volume,
+	case HAPTIC_EFFECT_HYPER_BLASTER: /* 98 ms */
+		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
+		                             80/* 0.08 seconds long */, 10/* Takes 0.01 second to get max strength */,
+		                             10/* Takes 0.01 second to fade away */);
+	case HAPTIC_EFFECT_ETFRIFLE: /* 1044 ms */
+		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
 		                             200/* 0.2 seconds long */, 100/* Takes 0.1 second to get max strength */,
 		                             100/* Takes 0.1 second to fade away */);
 	case HAPTIC_EFFECT_TRACKER:
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, 500/* 500 ms*/, hapric_volume,
+		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
 		                             200/* 0.2 seconds long */, 100/* Takes 0.1 second to get max strength */,
 		                             100/* Takes 0.1 second to fade away */);
-	case HAPTIC_EFFECT_MACHINEGUN:
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, 800/* 800 ms*/, hapric_volume,
-		                             600/* 0.6 seconds long */, 200/* Takes 0.2 second to get max strength */,
-		                             400/* Takes 0.4 second to fade away */);
-	case HAPTIC_EFFECT_SHOTGUN:
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, 700/* 700 ms*/, hapric_volume,
+	case HAPTIC_EFFECT_MACHINEGUN: /* 310 ms */
+		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
+		                             110/* 0.11 seconds long */, 100/* Takes 0.1 second to get max strength */,
+		                             100/* Takes 0.1 second to fade away */);
+	case HAPTIC_EFFECT_SHOTGUN: /* 584 ms */
+		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
 		                             500/* 0.5 seconds long */, 100/* Takes 0.1 second to get max strength */,
 		                             200/* Takes 0.2 second to fade away */);
-	case HAPTIC_EFFECT_SHOTGUN2:
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, 700/* 700 ms*/, hapric_volume,
+	case HAPTIC_EFFECT_SSHOTGUN: /* 960 ms */
+		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
 		                             500/* 0.5 seconds long */, 100/* Takes 0.1 second to get max strength */,
 		                             100/* Takes 0.1 second to fade away */);
-	case HAPTIC_EFFECT_SSHOTGUN:
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, 700/* 700 ms*/, hapric_volume,
-		                             500/* 0.5 seconds long */, 100/* Takes 0.1 second to get max strength */,
-		                             100/* Takes 0.1 second to fade away */);
-	case HAPTIC_EFFECT_RAILGUN:
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, 700/* 700 ms*/, hapric_volume,
+	case HAPTIC_EFFECT_RAILGUN: /* 1501 ms */
+		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
 		                             400/* 0.4 seconds long */, 100/* Takes 0.1 second to get max strength */,
 		                             100/* Takes 0.1 second to fade away */);
-	case HAPTIC_EFFECT_ROCKETGUN:
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, 700/* 700 ms*/, hapric_volume,
+	case HAPTIC_EFFECT_ROCKETGUN: /* 1201 ms */
+		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
 		                             400/* 0.4 seconds long */, 300/* Takes 0.3 second to get max strength */,
 		                             100/* Takes 0.1 second to fade away */);
-	case HAPTIC_EFFECT_GRENADE:
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, 500/* 500 ms*/, hapric_volume,
+	case HAPTIC_EFFECT_GRENADE: /* 1338 ms */
+		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
 		                             200/* 0.2 seconds long */, 100/* Takes 0.1 second to get max strength */,
 		                             100/* Takes 0.1 second to fade away */);
-	case HAPTIC_EFFECT_BFG:
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, 800/* 800 ms*/, hapric_volume,
+	case HAPTIC_EFFECT_BFG: /* 2394 ms */
+		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
 		                             600/* 0.2 seconds long */, 100/* Takes 0.1 second to get max strength */,
 		                             100/* Takes 0.1 second to fade away */);
-	case HAPTIC_EFFECT_PALANX:
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, 500/* 500 ms*/, hapric_volume,
+	case HAPTIC_EFFECT_PALANX: /* 2000 ms */
+		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
 		                             200/* 0.2 seconds long */, 100/* Takes 0.1 second to get max strength */,
 		                             100/* Takes 0.1 second to fade away */);
-	case HAPTIC_EFFECT_IONRIPPER:
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, 500/* 500 ms*/, hapric_volume,
+	case HAPTIC_EFFECT_IONRIPPER: /* 1044 ms */
+		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
 		                             200/* 0.2 seconds long */, 100/* Takes 0.1 second to get max strength */,
 		                             100/* Takes 0.1 second to fade away */);
 	default:
@@ -1244,11 +1238,11 @@ Haptic_Feedback(char *name, int effect_volume, int effect_duration, int effect_x
 	{
 		effect_type = HAPTIC_EFFECT_MENY;
 	}
-	else if (strstr(name, "weapons/blastf1a"))
+	else if (strstr(name, "weapons/blastf"))
 	{
 		effect_type = HAPTIC_EFFECT_BLASTER;
 	}
-	else if (strstr(name, "weapons/hyprbf1a"))
+	else if (strstr(name, "weapons/hyprbf"))
 	{
 		effect_type = HAPTIC_EFFECT_HYPER_BLASTER;
 	}
@@ -1256,30 +1250,30 @@ Haptic_Feedback(char *name, int effect_volume, int effect_duration, int effect_x
 	{
 		effect_type = HAPTIC_EFFECT_MACHINEGUN;
 	}
-	else if (strstr(name, "weapons/shotgf1b"))
+	else if (strstr(name, "weapons/shotgf"))
 	{
 		effect_type = HAPTIC_EFFECT_SHOTGUN;
 	}
-	else if (strstr(name, "weapons/sshotf1b"))
+	else if (strstr(name, "weapons/sshotf"))
 	{
 		effect_type = HAPTIC_EFFECT_SSHOTGUN;
 	}
-	else if (strstr(name, "weapons/railgf1a"))
+	else if (strstr(name, "weapons/railgf"))
 	{
 		effect_type = HAPTIC_EFFECT_RAILGUN;
 	}
-	else if (strstr(name, "weapons/rocklf1a") ||
-		strstr(name, "weapons/rocklx1a"))
+	else if (strstr(name, "weapons/rocklf") ||
+		strstr(name, "weapons/rocklx"))
 	{
 		effect_type = HAPTIC_EFFECT_ROCKETGUN;
 	}
-	else if (strstr(name, "weapons/grenlf1a") ||
-		strstr(name, "weapons/grenlx1a") ||
-		strstr(name, "weapons/hgrent1a"))
+	else if (strstr(name, "weapons/grenlf") ||
+		strstr(name, "weapons/grenlx") ||
+		strstr(name, "weapons/hgrent"))
 	{
 		effect_type = HAPTIC_EFFECT_GRENADE;
 	}
-	else if (strstr(name, "weapons/bfg__f1y"))
+	else if (strstr(name, "weapons/bfg__f"))
 	{
 		effect_type = HAPTIC_EFFECT_BFG;
 	}
@@ -1295,11 +1289,7 @@ Haptic_Feedback(char *name, int effect_volume, int effect_duration, int effect_x
 	{
 		effect_type = HAPTIC_EFFECT_ETFRIFLE;
 	}
-	else if (strstr(name, "weapons/shotg2"))
-	{
-		effect_type = HAPTIC_EFFECT_SHOTGUN2;
-	}
-	else if (strstr(name, "weapons/disint2"))
+	else if (strstr(name, "weapons/disint"))
 	{
 		effect_type = HAPTIC_EFFECT_TRACKER;
 	}
