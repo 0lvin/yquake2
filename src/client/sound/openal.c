@@ -167,7 +167,8 @@ AL_GetFormat(int width, int channels)
  * frontend to work.
  */
 sfxcache_t *
-AL_UploadSfx(sfx_t *s, wavinfo_t *s_info, byte *data, short volume)
+AL_UploadSfx(sfx_t *s, wavinfo_t *s_info, byte *data, short volume,
+			 int attack_length, int fade_length)
 {
 	sfxcache_t *sc;
 	ALsizei size;
@@ -203,6 +204,8 @@ AL_UploadSfx(sfx_t *s, wavinfo_t *s_info, byte *data, short volume)
 	sc->bufnum = name;
 	sc->stereo = s_info->channels - 1;
 	sc->volume = volume;
+	sc->fade = fade_length * 1000 / s_info->rate;
+	sc->attack = attack_length * 1000 / s_info->rate;
 
 	return sc;
 }

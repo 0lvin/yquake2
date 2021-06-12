@@ -256,6 +256,8 @@ S_LoadSound(sfx_t *s)
 	wavinfo_t info;
 	sfxcache_t *sc;
 	double sound_volume = 0;
+	int attack_length = 0;
+	int fade_length = 0;
 	char *name;
 
 	if (s->name[0] == '*')
@@ -349,8 +351,8 @@ S_LoadSound(sfx_t *s)
 			byte *sound_end = sound_data + sound_length;
 			while (sound_data < sound_end)
 			{
-				short sound_sample = *sound_data << 8;
 				// normilize to 16bit sound;
+				short sound_sample = *sound_data << 8;
 				sound_volume += (sound_sample * sound_sample);
 				sound_data ++;
 			}
@@ -362,17 +364,122 @@ S_LoadSound(sfx_t *s)
 		}
 	}
 
+	/* attack length */
+	{
+		short sound_max = 0;
+		int sound_length = info.samples * info.channels;
+		/* calculate max value*/
+		if (info.width == 2)
+		{
+			short *sound_data = (short *)(data + info.dataofs);
+			short *sound_end = sound_data + sound_length;
+			while (sound_data < sound_end)
+			{
+				short sound_sample = *sound_data;
+				if (sound_max < abs(sound_sample))
+				{
+					sound_max = abs(sound_sample);
+				}
+				sound_data ++;
+			}
+		}
+		else if (info.width == 1)
+		{
+			byte *sound_data = (byte *)(data + info.dataofs);
+			byte *sound_end = sound_data + sound_length;
+			while (sound_data < sound_end)
+			{
+				// normilize to 16bit sound;
+				short sound_sample = *sound_data << 8;
+				if (sound_max < abs(sound_sample))
+				{
+					sound_max = abs(sound_sample);
+				}
+				sound_data ++;
+			}
+		}
+
+		// use something in middle
+		sound_max = (sound_max + sound_volume) / 2;
+
+		// calculate attack/fade length
+		if (info.width == 2)
+		{
+			short *sound_data = (short *)(data + info.dataofs);
+			short *fade_data = sound_data;
+			short *sound_end = sound_data + sound_length;
+			short sound_sample = 0;
+			do
+			{
+				sound_sample = *sound_data;
+				sound_data ++;
+			}
+			while (sound_data < sound_end && abs(sound_sample) < sound_max);
+
+			/* fade_data == (short *)(data + info.dataofs) */
+			attack_length = (sound_data - fade_data) / info.channels;
+			fade_data = sound_data;
+
+			while (sound_data < sound_end)
+			{
+				sound_sample = *sound_data;
+				sound_data ++;
+
+				if (abs(sound_sample) > sound_max)
+				{
+					fade_data = sound_data;
+				}
+			}
+
+			fade_length = (sound_end - fade_data) / info.channels;
+		}
+		else if (info.width == 1)
+		{
+			byte *sound_data = (byte *)(data + info.dataofs);
+			byte *fade_data = sound_data;
+			byte *sound_end = sound_data + sound_length;
+			short sound_sample = 0;
+			do
+			{
+				// normilize to 16bit sound;
+				sound_sample = *sound_data << 8;
+				sound_data ++;
+			}
+			while (sound_data < sound_end && abs(sound_sample) < sound_max);
+
+			/* fade_data == (byte *)(data + info.dataofs) */
+			attack_length = (sound_data - fade_data) / info.channels;
+			fade_data = sound_data;
+
+			while (sound_data < sound_end)
+			{
+				// normilize to 16bit sound;
+				sound_sample = *sound_data << 8;
+				sound_data ++;
+
+				if (abs(sound_sample) > sound_max)
+				{
+					fade_data = sound_data;
+				}
+			}
+
+			fade_length = (sound_end - fade_data) / info.channels;
+		}
+	}
+
 #if USE_OPENAL
 	if (sound_started == SS_OAL)
 	{
-		sc = AL_UploadSfx(s, &info, data + info.dataofs, sound_volume);
+		sc = AL_UploadSfx(s, &info, data + info.dataofs, sound_volume,
+						  attack_length, fade_length);
 	}
 	else
 #endif
 	{
 		if (sound_started == SS_SDL)
 		{
-			if (!SDL_Cache(s, &info, data + info.dataofs, sound_volume))
+			if (!SDL_Cache(s, &info, data + info.dataofs, sound_volume,
+						   attack_length, fade_length))
 			{
 				Com_Printf("Pansen!\n");
 				FS_FreeFile(data);
@@ -1249,10 +1356,13 @@ S_SoundList(void)
 		{
 			size = sc->length * sc->width * (sc->stereo + 1);
 			total += size;
-			Com_Printf("%s(%2db) %8i(%d ch) %2.1f dB %s\n",
+			Com_Printf("%s(%2db) %8i(%d ch) %s %2.1f dB %.1fs:%.1fs..%.1fs\n",
 					sc->loopstart != -1 ? "L" : " ",
 					sc->width * 8, size,
-					(sc->stereo + 1), 10 * log10((float)sc->volume / (2 << 15)), sfx->name);
+					(sc->stereo + 1), sfx->name,
+					10 * log10((float)sc->volume / (2 << 15)),
+					(float)sc->length / 1000, (float)sc->attack / 1000,
+					(float)sc->fade / 1000);
 		}
 		else
 		{
