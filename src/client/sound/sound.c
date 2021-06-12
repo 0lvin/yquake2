@@ -1050,8 +1050,6 @@ S_StartSound(vec3_t origin, int entnum, int entchannel, sfx_t *sfx,
 			effect_volume = sfx->cache->volume / 16;
 		}
 
-		// Com_Printf("%s: distance: %f volume %d: %d ms\n", sfx->name, distance_direction, effect_volume, effect_duration);
-
 		Haptic_Feedback(
 			sfx->name, (16 - distance_direction / 32) * effect_volume,
 			effect_duration, sfx->cache->attack, sfx->cache->fade,

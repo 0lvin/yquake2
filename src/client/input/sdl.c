@@ -78,33 +78,11 @@ static cvar_t *windowed_mouse;
 
 // ----
 
-/* Haptic feedback types */
-enum QHARPICTYPES {
-	HAPTIC_EFFECT_UNKNOWN = -1,
-	HAPTIC_EFFECT_BLASTER = 0,
-	HAPTIC_EFFECT_MENY,
-	HAPTIC_EFFECT_HYPER_BLASTER,
-	HAPTIC_EFFECT_MACHINEGUN,
-	HAPTIC_EFFECT_SHOTGUN,
-	HAPTIC_EFFECT_SSHOTGUN,
-	HAPTIC_EFFECT_RAILGUN,
-	HAPTIC_EFFECT_ROCKETGUN,
-	HAPTIC_EFFECT_GRENADE,
-	HAPTIC_EFFECT_BFG,
-	HAPTIC_EFFECT_PALANX,
-	HAPTIC_EFFECT_IONRIPPER,
-	HAPTIC_EFFECT_ETFRIFLE,
-	HAPTIC_EFFECT_TRACKER,
-	HAPTIC_EFFECT_PAIN,
-	HAPTIC_EFFECT_STEP,
-	HAPTIC_EFFECT_TRAPCOCK,
-	HAPTIC_EFFECT_LAST
-};
-
 struct hapric_effects_cache {
-	int effect_type;
 	int effect_volume;
 	int effect_duration;
+	int effect_attack;
+	int effect_fade;
 	int effect_id;
 	int effect_x;
 	int effect_y;
@@ -117,10 +95,12 @@ static SDL_Haptic *joystick_haptic = NULL;
 static SDL_Joystick *joystick = NULL;
 static SDL_GameController *controller = NULL;
 
+#define HAPTIC_EFFECT_LIST_SIZE 16
+
 static int last_haptic_volume = 0;
-static int last_haptic_efffect_size = HAPTIC_EFFECT_LAST;
+static int last_haptic_efffect_size = HAPTIC_EFFECT_LIST_SIZE;
 static int last_haptic_efffect_pos = 0;
-static struct hapric_effects_cache last_haptic_efffect[HAPTIC_EFFECT_LAST];
+static struct hapric_effects_cache last_haptic_efffect[HAPTIC_EFFECT_LIST_SIZE];
 
 // Joystick sensitivity
 cvar_t *joy_yawsensitivity;
@@ -1030,76 +1010,6 @@ IN_Haptic_Effect_Init(int effect_x, int effect_y, int effect_z, int period, int 
 	return effect_id;
 }
 
-static int
-IN_Haptic_Effects_To_Id(int haptic_effect, int effect_volume, int effect_duration,
-				     int effect_attack, int effect_fade,
-				     int effect_x, int effect_y, int effect_z)
-{
-	if ((SDL_HapticQuery(joystick_haptic) & SDL_HAPTIC_SINE)==0)
-	{
-		return -1;
-	}
-
-	int hapric_volume = joy_haptic_magnitude->value * effect_volume; // 32767 max strength;
-
-	if (effect_duration <= 0)
-	{
-		return -1;
-	}
-
-	switch(haptic_effect) {
-	case HAPTIC_EFFECT_MENY:           /* 596ms */
-	case HAPTIC_EFFECT_TRAPCOCK:
-	case HAPTIC_EFFECT_STEP:            /*  268ms  */
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
-		                              effect_attack, effect_fade);
-	case HAPTIC_EFFECT_PAIN: /* 391 ms */
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
-		                              effect_attack, effect_fade);
-	case HAPTIC_EFFECT_BLASTER: /* 473 ms */
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
-		                              effect_attack, effect_fade);
-	case HAPTIC_EFFECT_HYPER_BLASTER: /* 98 ms */
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
-		                              effect_attack, effect_fade);
-	case HAPTIC_EFFECT_ETFRIFLE: /* 1044 ms */
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
-		                              effect_attack, effect_fade);
-	case HAPTIC_EFFECT_TRACKER:
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
-		                              effect_attack, effect_fade);
-	case HAPTIC_EFFECT_MACHINEGUN: /* 310 ms */
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
-		                              effect_attack, effect_fade);
-	case HAPTIC_EFFECT_SHOTGUN: /* 584 ms */
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
-		                              effect_attack, effect_fade);
-	case HAPTIC_EFFECT_SSHOTGUN: /* 960 ms */
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
-		                              effect_attack, effect_fade);
-	case HAPTIC_EFFECT_RAILGUN: /* 1501 ms */
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
-		                              effect_attack, effect_fade);
-	case HAPTIC_EFFECT_ROCKETGUN: /* 1201 ms */
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
-		                              effect_attack, effect_fade);
-	case HAPTIC_EFFECT_GRENADE: /* 1338 ms */
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
-		                              effect_attack, effect_fade);
-	case HAPTIC_EFFECT_BFG: /* 2394 ms */
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
-		                              effect_attack, effect_fade);
-	case HAPTIC_EFFECT_PALANX: /* 2000 ms */
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
-		                              effect_attack, effect_fade);
-	case HAPTIC_EFFECT_IONRIPPER: /* 1044 ms */
-		return IN_Haptic_Effect_Init(effect_x, effect_y, effect_z, effect_duration, hapric_volume,
-		                              effect_attack, effect_fade);
-	default:
-		return -1;
-	}
-}
-
 static void
 IN_Haptic_Effects_Info(void)
 {
@@ -1116,17 +1026,18 @@ IN_Haptic_Effects_Init(void)
 {
 	last_haptic_efffect_size = SDL_HapticNumEffectsPlaying(joystick_haptic);
 
-	if (last_haptic_efffect_size > HAPTIC_EFFECT_LAST)
+	if (last_haptic_efffect_size > HAPTIC_EFFECT_LIST_SIZE)
 	{
-		last_haptic_efffect_size = HAPTIC_EFFECT_LAST;
+		last_haptic_efffect_size = HAPTIC_EFFECT_LIST_SIZE;
 	}
 
-	for (int i=0; i<HAPTIC_EFFECT_LAST; i++)
+	for (int i=0; i<HAPTIC_EFFECT_LIST_SIZE; i++)
 	{
-		last_haptic_efffect[i].effect_type = HAPTIC_EFFECT_UNKNOWN;
 		last_haptic_efffect[i].effect_id = -1;
 		last_haptic_efffect[i].effect_volume = 0;
 		last_haptic_efffect[i].effect_duration = 0;
+		last_haptic_efffect[i].effect_attack = 0;
+		last_haptic_efffect[i].effect_fade = 0;
 		last_haptic_efffect[i].effect_x = 0;
 		last_haptic_efffect[i].effect_y = 0;
 		last_haptic_efffect[i].effect_z = 0;
@@ -1155,11 +1066,12 @@ IN_Haptic_Effect_Shutdown(int * effect_id)
 static void
 IN_Haptic_Effects_Shutdown(void)
 {
-	for (int i=0; i<HAPTIC_EFFECT_LAST; i++)
+	for (int i=0; i<HAPTIC_EFFECT_LIST_SIZE; i++)
 	{
-		last_haptic_efffect[i].effect_type = HAPTIC_EFFECT_UNKNOWN;
 		last_haptic_efffect[i].effect_volume = 0;
 		last_haptic_efffect[i].effect_duration = 0;
+		last_haptic_efffect[i].effect_attack = 0;
+		last_haptic_efffect[i].effect_fade = 0;
 		last_haptic_efffect[i].effect_x = 0;
 		last_haptic_efffect[i].effect_y = 0;
 		last_haptic_efffect[i].effect_z = 0;
@@ -1177,8 +1089,6 @@ IN_Haptic_Effects_Shutdown(void)
 void
 Haptic_Feedback(char *name, int effect_volume, int effect_duration, int effect_attack, int effect_fade, int effect_x, int effect_y, int effect_z)
 {
-	int effect_type = HAPTIC_EFFECT_UNKNOWN;
-
 	if (!joystick_haptic)
 	{
 		return;
@@ -1207,110 +1117,74 @@ Haptic_Feedback(char *name, int effect_volume, int effect_duration, int effect_a
 
 	last_haptic_volume = joy_haptic_magnitude->value * 255;
 
-	if (strstr(name, "misc/menu"))
-	{
-		effect_type = HAPTIC_EFFECT_MENY;
-	}
-	else if (strstr(name, "weapons/blastf"))
-	{
-		effect_type = HAPTIC_EFFECT_BLASTER;
-	}
-	else if (strstr(name, "weapons/hyprbf"))
-	{
-		effect_type = HAPTIC_EFFECT_HYPER_BLASTER;
-	}
-	else if (strstr(name, "weapons/machgf"))
-	{
-		effect_type = HAPTIC_EFFECT_MACHINEGUN;
-	}
-	else if (strstr(name, "weapons/shotgf"))
-	{
-		effect_type = HAPTIC_EFFECT_SHOTGUN;
-	}
-	else if (strstr(name, "weapons/sshotf"))
-	{
-		effect_type = HAPTIC_EFFECT_SSHOTGUN;
-	}
-	else if (strstr(name, "weapons/railgf"))
-	{
-		effect_type = HAPTIC_EFFECT_RAILGUN;
-	}
-	else if (strstr(name, "weapons/rocklf") ||
-		strstr(name, "weapons/rocklx"))
-	{
-		effect_type = HAPTIC_EFFECT_ROCKETGUN;
-	}
-	else if (strstr(name, "weapons/grenlf") ||
+	if (
+		strstr(name, "misc/menu") ||
+		strstr(name, "weapons/blastf") ||
+		strstr(name, "weapons/hyprbf") ||
+		strstr(name, "weapons/machgf") ||
+		strstr(name, "weapons/shotgf") ||
+		strstr(name, "weapons/sshotf") ||
+		strstr(name, "weapons/railgf") ||
+		strstr(name, "weapons/rocklf") ||
+		strstr(name, "weapons/rocklx") ||
+		strstr(name, "weapons/grenlf") ||
 		strstr(name, "weapons/grenlx") ||
-		strstr(name, "weapons/hgrent"))
-	{
-		effect_type = HAPTIC_EFFECT_GRENADE;
-	}
-	else if (strstr(name, "weapons/bfg__f"))
-	{
-		effect_type = HAPTIC_EFFECT_BFG;
-	}
-	else if (strstr(name, "weapons/plasshot"))
-	{
-		effect_type = HAPTIC_EFFECT_PALANX;
-	}
-	else if (strstr(name, "weapons/rippfire"))
-	{
-		effect_type = HAPTIC_EFFECT_IONRIPPER;
-	}
-	else if (strstr(name, "weapons/nail1"))
-	{
-		effect_type = HAPTIC_EFFECT_ETFRIFLE;
-	}
-	else if (strstr(name, "weapons/disint"))
-	{
-		effect_type = HAPTIC_EFFECT_TRACKER;
-	}
-	/* detect pain for any player model */
-	else if ((
-		strstr(name, "player/") ||
-		strstr(name, "players/")
-	) && (
-		strstr(name, "/pain")
-	))
-	{
-		effect_type = HAPTIC_EFFECT_PAIN;
-	}
-	else if (strstr(name, "player/step") ||
-		strstr(name, "player/land"))
-	{
-		effect_type = HAPTIC_EFFECT_STEP;
-	}
-	else if (strstr(name, "weapons/trapcock"))
-	{
-		effect_type = HAPTIC_EFFECT_TRAPCOCK;
-	}
-
-	if (effect_type != HAPTIC_EFFECT_UNKNOWN)
+		strstr(name, "weapons/hgrent") ||
+		strstr(name, "weapons/bfg__f") ||
+		strstr(name, "weapons/plasshot") ||
+		strstr(name, "weapons/rippfire") ||
+		strstr(name, "weapons/nail1") ||
+		strstr(name, "weapons/disint") ||
+		/* detect pain for any player model */
+		((
+			strstr(name, "player/") ||
+			strstr(name, "players/")
+		) && (
+			strstr(name, "/pain")
+		)) ||
+		strstr(name, "player/step") ||
+		strstr(name, "player/land") ||
+		strstr(name, "weapons/trapcock")
+	)
 	{
 		// check last effect for reuse
-		if (last_haptic_efffect[last_haptic_efffect_pos].effect_type != effect_type ||
+		if (
 		    last_haptic_efffect[last_haptic_efffect_pos].effect_volume != effect_volume ||
 		    last_haptic_efffect[last_haptic_efffect_pos].effect_duration != effect_duration ||
+		    last_haptic_efffect[last_haptic_efffect_pos].effect_attack != effect_attack ||
+		    last_haptic_efffect[last_haptic_efffect_pos].effect_fade != effect_fade ||
 		    last_haptic_efffect[last_haptic_efffect_pos].effect_x != effect_x ||
 		    last_haptic_efffect[last_haptic_efffect_pos].effect_y != effect_y ||
 		    last_haptic_efffect[last_haptic_efffect_pos].effect_z != effect_z)
 		{
-			Com_Printf("%s: volume %d: %d ms\n", name,  effect_volume, effect_duration);
+			if ((SDL_HapticQuery(joystick_haptic) & SDL_HAPTIC_SINE)==0)
+			{
+				return;
+			}
+
+			int hapric_volume = joy_haptic_magnitude->value * effect_volume; // 32767 max strength;
+
+			if (effect_duration <= 0)
+			{
+				return;
+			}
+
+			Com_Printf("%s: volume %d: %d ms %d:%d ms speed: %.2f\n",
+				name,  effect_volume, effect_duration, effect_attack, effect_fade, (float)effect_volume / effect_fade);
 
 			// FIFO for effects
 			last_haptic_efffect_pos = (last_haptic_efffect_pos+1) % last_haptic_efffect_size;
 			IN_Haptic_Effect_Shutdown(&last_haptic_efffect[last_haptic_efffect_pos].effect_id);
 			last_haptic_efffect[last_haptic_efffect_pos].effect_volume = effect_volume;
 			last_haptic_efffect[last_haptic_efffect_pos].effect_duration = effect_duration;
-			last_haptic_efffect[last_haptic_efffect_pos].effect_type = effect_type;
+			last_haptic_efffect[last_haptic_efffect_pos].effect_attack = effect_attack;
+			last_haptic_efffect[last_haptic_efffect_pos].effect_fade = effect_fade;
 			last_haptic_efffect[last_haptic_efffect_pos].effect_x = effect_x;
 			last_haptic_efffect[last_haptic_efffect_pos].effect_y = effect_y;
 			last_haptic_efffect[last_haptic_efffect_pos].effect_z = effect_z;
-			last_haptic_efffect[last_haptic_efffect_pos].effect_id = IN_Haptic_Effects_To_Id(
-				effect_type, effect_volume, effect_duration,
-				effect_attack, effect_fade,
-				effect_x, effect_y, effect_z);
+			last_haptic_efffect[last_haptic_efffect_pos].effect_id = IN_Haptic_Effect_Init(
+				effect_x, effect_y, effect_z,
+				effect_duration, hapric_volume, effect_attack, effect_fade);
 		}
 
 		SDL_HapticRunEffect(joystick_haptic, last_haptic_efffect[last_haptic_efffect_pos].effect_id, 1);
