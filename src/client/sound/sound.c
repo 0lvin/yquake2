@@ -256,8 +256,10 @@ S_LoadSound(sfx_t *s)
 	wavinfo_t info;
 	sfxcache_t *sc;
 	double sound_volume = 0;
+	int begin_length = 0;
 	int attack_length = 0;
 	int fade_length = 0;
+	int end_length = 0;
 	char *name;
 
 	if (s->name[0] == '*')
@@ -405,40 +407,81 @@ S_LoadSound(sfx_t *s)
 		// calculate attack/fade length
 		if (info.width == 2)
 		{
+			// calculate attack/fade length
 			short *sound_data = (short *)(data + info.dataofs);
+			short *delay_data = sound_data;
 			short *fade_data = sound_data;
 			short *sound_end = sound_data + sound_length;
 			short sound_sample = 0;
+			short sound_treshold = sound_max / 2;
+
+			/* delay calculate */
+			do
+			{
+				sound_sample = *sound_data;
+				sound_data ++;
+			}
+			while (sound_data < sound_end && abs(sound_sample) < sound_treshold);
+			/* delay_data == (short *)(data + info.dataofs) */
+			begin_length = (sound_data - delay_data) / info.channels;
+			delay_data = sound_data;
+			fade_data = sound_data;
+
+			/* attack calculate */
 			do
 			{
 				sound_sample = *sound_data;
 				sound_data ++;
 			}
 			while (sound_data < sound_end && abs(sound_sample) < sound_max);
-
-			/* fade_data == (short *)(data + info.dataofs) */
-			attack_length = (sound_data - fade_data) / info.channels;
+			/* fade_data == delay_data */
+			attack_length = (sound_data - delay_data) / info.channels;
 			fade_data = sound_data;
 
-			while (sound_data < sound_end)
+			/* end calculate */
+			sound_data = sound_end;
+			do
 			{
+				sound_data --;
 				sound_sample = *sound_data;
-				sound_data ++;
-
-				if (abs(sound_sample) > sound_max)
-				{
-					fade_data = sound_data;
-				}
 			}
+			while (sound_data > fade_data && abs(sound_sample) < sound_treshold);
+			end_length = (sound_end -  sound_data) / info.channels;
+			sound_end = sound_data;
 
-			fade_length = (sound_end - fade_data) / info.channels;
+			/* fade calculate */
+			do
+			{
+				sound_data --;
+				sound_sample = *sound_data;
+			}
+			while (sound_data > fade_data && abs(sound_sample) < sound_max);
+			fade_length = (sound_end - sound_data) / info.channels;
 		}
 		else if (info.width == 1)
 		{
+			// calculate attack/fade length
 			byte *sound_data = (byte *)(data + info.dataofs);
+			byte *delay_data = sound_data;
 			byte *fade_data = sound_data;
 			byte *sound_end = sound_data + sound_length;
 			short sound_sample = 0;
+			short sound_treshold = sound_max / 2;
+
+			/* delay calculate */
+			do
+			{
+				// normilize to 16bit sound;
+				sound_sample = *sound_data << 8;
+				sound_data ++;
+			}
+			while (sound_data < sound_end && abs(sound_sample) < sound_treshold);
+			/* delay_data == (short *)(data + info.dataofs) */
+			begin_length = (sound_data - delay_data) / info.channels;
+			delay_data = sound_data;
+			fade_data = sound_data;
+
+			/* attack calculate */
 			do
 			{
 				// normilize to 16bit sound;
@@ -446,24 +489,31 @@ S_LoadSound(sfx_t *s)
 				sound_data ++;
 			}
 			while (sound_data < sound_end && abs(sound_sample) < sound_max);
-
-			/* fade_data == (byte *)(data + info.dataofs) */
-			attack_length = (sound_data - fade_data) / info.channels;
+			/* fade_data == delay_data */
+			attack_length = (sound_data - delay_data) / info.channels;
 			fade_data = sound_data;
 
-			while (sound_data < sound_end)
+			/* end calculate */
+			sound_data = sound_end;
+			do
 			{
+				sound_data --;
 				// normilize to 16bit sound;
 				sound_sample = *sound_data << 8;
-				sound_data ++;
-
-				if (abs(sound_sample) > sound_max)
-				{
-					fade_data = sound_data;
-				}
 			}
+			while (sound_data > fade_data && abs(sound_sample) < sound_treshold);
+			end_length = (sound_end -  sound_data) / info.channels;
+			sound_end = sound_data;
 
-			fade_length = (sound_end - fade_data) / info.channels;
+			/* fade calculate */
+			do
+			{
+				sound_data --;
+				// normilize to 16bit sound;
+				sound_sample = *sound_data << 8;
+			}
+			while (sound_data > fade_data && abs(sound_sample) < sound_max);
+			fade_length = (sound_end - sound_data) / info.channels;
 		}
 	}
 
@@ -471,6 +521,7 @@ S_LoadSound(sfx_t *s)
 	if (sound_started == SS_OAL)
 	{
 		sc = AL_UploadSfx(s, &info, data + info.dataofs, sound_volume,
+						  begin_length, end_length,
 						  attack_length, fade_length);
 	}
 	else
@@ -479,7 +530,8 @@ S_LoadSound(sfx_t *s)
 		if (sound_started == SS_SDL)
 		{
 			if (!SDL_Cache(s, &info, data + info.dataofs, sound_volume,
-						   attack_length, fade_length))
+						  begin_length, end_length,
+						  attack_length, fade_length))
 			{
 				Com_Printf("Pansen!\n");
 				FS_FreeFile(data);
@@ -1052,7 +1104,9 @@ S_StartSound(vec3_t origin, int entnum, int entchannel, sfx_t *sfx,
 
 		Haptic_Feedback(
 			sfx->name, (16 - distance_direction / 32) * effect_volume,
-			effect_duration, sfx->cache->attack, sfx->cache->fade,
+			effect_duration,
+			sfx->cache->begin, sfx->cache->end,
+			sfx->cache->attack, sfx->cache->fade,
 			dir_x, dir_y, dir_z);
 	}
 
@@ -1355,13 +1409,16 @@ S_SoundList(void)
 		{
 			size = sc->length * sc->width * (sc->stereo + 1);
 			total += size;
-			Com_Printf("%s(%2db) %8i(%d ch) %s %2.1f dB %.1fs:%.1fs..%.1fs\n",
+			Com_Printf("%s(%2db) %8i(%d ch) %s %2.1f dB %.1fs:%.1f..%.1f..%.1f..%.1f\n",
 					sc->loopstart != -1 ? "L" : " ",
 					sc->width * 8, size,
 					(sc->stereo + 1), sfx->name,
 					10 * log10((float)sc->volume / (2 << 15)),
-					(float)sc->length / 1000, (float)sc->attack / 1000,
-					(float)sc->fade / 1000);
+					(float)sc->length / 1000,
+					(float)sc->begin / 1000,
+					(float)sc->attack / 1000,
+					(float)sc->fade / 1000,
+					(float)sc->end / 1000);
 		}
 		else
 		{

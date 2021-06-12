@@ -81,6 +81,8 @@ static cvar_t *windowed_mouse;
 struct hapric_effects_cache {
 	int effect_volume;
 	int effect_duration;
+	int effect_begin;
+	int effect_end;
 	int effect_attack;
 	int effect_fade;
 	int effect_id;
@@ -970,7 +972,9 @@ static void IN_Haptic_Shutdown(void);
  * Init haptic effects
  */
 static int
-IN_Haptic_Effect_Init(int effect_x, int effect_y, int effect_z, int period, int magnitude, int attack, int fade)
+IN_Haptic_Effect_Init(int effect_x, int effect_y, int effect_z,
+				 int period, int magnitude,
+				 int delay, int attack, int fade)
 {
 	static SDL_HapticEffect haptic_effect;
 
@@ -994,6 +998,7 @@ IN_Haptic_Effect_Init(int effect_x, int effect_y, int effect_z, int period, int 
 	haptic_effect.periodic.period = period;
 	haptic_effect.periodic.magnitude = magnitude;
 	haptic_effect.periodic.length = period;
+	haptic_effect.periodic.delay = delay;
 	haptic_effect.periodic.attack_length = attack;
 	haptic_effect.periodic.fade_length = fade;
 
@@ -1036,6 +1041,8 @@ IN_Haptic_Effects_Init(void)
 		last_haptic_efffect[i].effect_id = -1;
 		last_haptic_efffect[i].effect_volume = 0;
 		last_haptic_efffect[i].effect_duration = 0;
+		last_haptic_efffect[i].effect_begin = 0;
+		last_haptic_efffect[i].effect_end = 0;
 		last_haptic_efffect[i].effect_attack = 0;
 		last_haptic_efffect[i].effect_fade = 0;
 		last_haptic_efffect[i].effect_x = 0;
@@ -1070,6 +1077,8 @@ IN_Haptic_Effects_Shutdown(void)
 	{
 		last_haptic_efffect[i].effect_volume = 0;
 		last_haptic_efffect[i].effect_duration = 0;
+		last_haptic_efffect[i].effect_begin = 0;
+		last_haptic_efffect[i].effect_end = 0;
 		last_haptic_efffect[i].effect_attack = 0;
 		last_haptic_efffect[i].effect_fade = 0;
 		last_haptic_efffect[i].effect_x = 0;
@@ -1087,7 +1096,10 @@ IN_Haptic_Effects_Shutdown(void)
  *    name - sound file name
  */
 void
-Haptic_Feedback(char *name, int effect_volume, int effect_duration, int effect_attack, int effect_fade, int effect_x, int effect_y, int effect_z)
+Haptic_Feedback(char *name, int effect_volume, int effect_duration,
+			   int effect_begin, int effect_end,
+			   int effect_attack, int effect_fade,
+			   int effect_x, int effect_y, int effect_z)
 {
 	if (!joystick_haptic)
 	{
@@ -1151,6 +1163,8 @@ Haptic_Feedback(char *name, int effect_volume, int effect_duration, int effect_a
 		if (
 		    last_haptic_efffect[last_haptic_efffect_pos].effect_volume != effect_volume ||
 		    last_haptic_efffect[last_haptic_efffect_pos].effect_duration != effect_duration ||
+		    last_haptic_efffect[last_haptic_efffect_pos].effect_begin != effect_begin ||
+		    last_haptic_efffect[last_haptic_efffect_pos].effect_end != effect_end ||
 		    last_haptic_efffect[last_haptic_efffect_pos].effect_attack != effect_attack ||
 		    last_haptic_efffect[last_haptic_efffect_pos].effect_fade != effect_fade ||
 		    last_haptic_efffect[last_haptic_efffect_pos].effect_x != effect_x ||
@@ -1169,8 +1183,10 @@ Haptic_Feedback(char *name, int effect_volume, int effect_duration, int effect_a
 				return;
 			}
 
-			Com_Printf("%s: volume %d: %d ms %d:%d ms speed: %.2f\n",
-				name,  effect_volume, effect_duration, effect_attack, effect_fade, (float)effect_volume / effect_fade);
+			Com_Printf("%s: volume %d: %d ms %d:%d:%d ms speed: %.2f\n",
+				name,  effect_volume, effect_duration - effect_end,
+				effect_begin, effect_attack, effect_fade,
+				(float)effect_volume / effect_fade);
 
 			// FIFO for effects
 			last_haptic_efffect_pos = (last_haptic_efffect_pos+1) % last_haptic_efffect_size;
@@ -1184,7 +1200,8 @@ Haptic_Feedback(char *name, int effect_volume, int effect_duration, int effect_a
 			last_haptic_efffect[last_haptic_efffect_pos].effect_z = effect_z;
 			last_haptic_efffect[last_haptic_efffect_pos].effect_id = IN_Haptic_Effect_Init(
 				effect_x, effect_y, effect_z,
-				effect_duration, hapric_volume, effect_attack, effect_fade);
+				effect_duration - effect_end, hapric_volume,
+				effect_begin, effect_attack, effect_fade);
 		}
 
 		SDL_HapticRunEffect(joystick_haptic, last_haptic_efffect[last_haptic_efffect_pos].effect_id, 1);

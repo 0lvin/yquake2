@@ -911,6 +911,7 @@ SDL_UpdateScaletable(void)
  */
 qboolean
 SDL_Cache(sfx_t *sfx, wavinfo_t *info, byte *data, short volume,
+		  int begin_length, int  end_length,
 		  int attack_length, int fade_length)
 {
 	float stepscale;
@@ -942,6 +943,8 @@ SDL_Cache(sfx_t *sfx, wavinfo_t *info, byte *data, short volume,
 	sc->length = (int)(info->samples / stepscale);
 	sc->speed = sound.speed;
 	sc->volume = volume;
+	sc->begin = begin_length * 1000 / info->rate;
+	sc->end = end_length * 1000 / info->rate;
 	sc->fade = fade_length * 1000 / info->rate;
 	sc->attack = attack_length * 1000 / info->rate;
 
