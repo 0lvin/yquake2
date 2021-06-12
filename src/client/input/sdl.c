@@ -1131,22 +1131,7 @@ Haptic_Feedback(char *name, int effect_volume, int effect_duration,
 
 	if (
 		strstr(name, "misc/menu") ||
-		strstr(name, "weapons/blastf") ||
-		strstr(name, "weapons/hyprbf") ||
-		strstr(name, "weapons/machgf") ||
-		strstr(name, "weapons/shotgf") ||
-		strstr(name, "weapons/sshotf") ||
-		strstr(name, "weapons/railgf") ||
-		strstr(name, "weapons/rocklf") ||
-		strstr(name, "weapons/rocklx") ||
-		strstr(name, "weapons/grenlf") ||
-		strstr(name, "weapons/grenlx") ||
-		strstr(name, "weapons/hgrent") ||
-		strstr(name, "weapons/bfg__f") ||
-		strstr(name, "weapons/plasshot") ||
-		strstr(name, "weapons/rippfire") ||
-		strstr(name, "weapons/nail1") ||
-		strstr(name, "weapons/disint") ||
+		strstr(name, "weapons/") ||
 		/* detect pain for any player model */
 		((
 			strstr(name, "player/") ||
@@ -1155,8 +1140,7 @@ Haptic_Feedback(char *name, int effect_volume, int effect_duration,
 			strstr(name, "/pain")
 		)) ||
 		strstr(name, "player/step") ||
-		strstr(name, "player/land") ||
-		strstr(name, "weapons/trapcock")
+		strstr(name, "player/land")
 	)
 	{
 		// check last effect for reuse
