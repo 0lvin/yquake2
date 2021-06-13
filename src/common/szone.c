@@ -73,8 +73,7 @@ SZ_GetSpace(sizebuf_t *buf, int length)
 void
 SZ_Write(sizebuf_t *buf, void *data, int length)
 {
-	if(length > 0)
-		memcpy(SZ_GetSpace(buf, length), data, length);
+	memcpy(SZ_GetSpace(buf, length), data, length);
 }
 
 void
