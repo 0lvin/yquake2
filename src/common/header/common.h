@@ -32,7 +32,7 @@
 #include "shared.h"
 #include "crc.h"
 
-#define YQ2VERSION "8.00rc1"
+#define YQ2VERSION "8.00"
 #define BASEDIRNAME "baseq2"
 
 #ifndef YQ2OSTYPE
@@ -355,6 +355,7 @@ void Cbuf_InsertFromDefer(void);
 typedef void (*xcommand_t)(void);
 
 void Cmd_Init(void);
+void Cmd_Shutdown(void);
 
 void Cmd_AddCommand(char *cmd_name, xcommand_t function);
 
@@ -677,6 +678,7 @@ char **FS_ListFiles2(char *findname, int *numfiles,
 void FS_FreeList(char **list, int nfiles);
 
 void FS_InitFilesystem(void);
+void FS_ShutdownFilesystem(void);
 void FS_BuildGameSpecificSearchPath(char *dir);
 char *FS_Gamedir(void);
 char *FS_NextPath(char *prevpath);
