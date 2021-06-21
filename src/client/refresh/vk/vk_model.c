@@ -1456,12 +1456,12 @@ static qboolean Mod_Load_IQM(model_t *mod)
 		mod->numframes = 0;
 
 		// vertexes
-		struct iqmvertexarray *vas = (struct iqmvertexarray *)(buf+ header->ofs_vertexarrays);
+		struct iqmvertexarray *vas = (struct iqmvertexarray *)((char*)buf+ header->ofs_vertexarrays);
 		for(int i = 0; i < (int)header->num_vertexarrays; i++)
 		{
 			struct iqmvertexarray *va = vas + i;
 
-			R_Printf(PRINT_ALL, "%s: %s load %d item\n",
+			R_Printf(PRINT_ALL, "%s: %s load %d type vertex\n",
 				__func__, mod->name, va->type);
 
 			switch(va->type)
