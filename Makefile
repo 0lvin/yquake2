@@ -706,7 +706,7 @@ ref_vk:
 	$(MAKE) release/ref_vk.so
 
 release/ref_vk.so : CFLAGS += -fPIC
-release/ref_vk.so : LDFLAGS += -shared
+release/ref_vk.so : LDFLAGS += -shared -lm -ldl
 endif
 
 build/ref_vk/%.o: %.c
