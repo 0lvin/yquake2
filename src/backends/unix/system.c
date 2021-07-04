@@ -389,7 +389,11 @@ Sys_GetGameAPI(void *parms)
 
 		fclose(fp);
 
+#ifdef USE_SANITIZER
+		game_library = dlopen(name, RTLD_NOW | RTLD_NODELETE);
+#else
 		game_library = dlopen(name, RTLD_NOW);
+#endif
 
 		if (game_library)
 		{
@@ -526,18 +530,21 @@ Sys_RemoveDir(const char *path)
 	}
 }
 
-void
+qboolean
 Sys_Realpath(const char *in, char *out, size_t size)
 {
 	char *converted = realpath(in, NULL);
 
 	if (converted == NULL)
 	{
-		Com_Error(ERR_FATAL, "Couldn't get realpath for %s\n", in);
+		Com_Printf("Couldn't get realpath for %s\n", in);
+		return false;
 	}
 
 	Q_strlcpy(out, converted, size);
 	free(converted);
+
+	return true;
 }
 
 /* ================================================================ */
@@ -578,7 +585,11 @@ Sys_LoadLibrary(const char *path, const char *sym, void **handle)
 
 	*handle = NULL;
 
+#ifdef USE_SANITIZER
+	module = dlopen(path, RTLD_LAZY | RTLD_NODELETE);
+#else
 	module = dlopen(path, RTLD_LAZY);
+#endif
 
 	if (!module)
 	{
