@@ -75,7 +75,7 @@ Z_Stats_f(void)
 }
 
 void
-Z_FreeTags(int tag)
+Z_FreeTags(unsigned short tag)
 {
 	zhead_t *z, *next;
 
@@ -91,7 +91,7 @@ Z_FreeTags(int tag)
 }
 
 void *
-Z_TagMalloc(size_t size, int tag)
+Z_TagMalloc(size_t size, unsigned short tag)
 {
 	zhead_t *z;
 
@@ -135,7 +135,7 @@ Z_Malloc(size_t size)
 }
 
 void *
-Z_TagRealloc(void *ptr, size_t size, int tag)
+Z_TagRealloc(void *ptr, size_t size, unsigned short tag)
 {
 	zhead_t *z, *zr;
 

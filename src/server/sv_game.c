@@ -25,6 +25,7 @@
  */
 
 #include "header/server.h"
+#include <limits.h>
 
 #ifndef DEDICATED_ONLY
 void SCR_DebugGraph(float value, int color);
@@ -420,7 +421,29 @@ GI_TagMalloc(int size, int tag)
 		return NULL;
 	}
 
-	return Z_TagMalloc(size, tag);
+	if ((tag > USHRT_MAX) || (tag < 0))
+	{
+		Com_Printf("%s: tag outside [0, 65535]: %i\n",
+			__func__, tag);
+
+		tag = 0;
+	}
+
+	return Z_TagMalloc(size, (unsigned short)tag);
+}
+
+static void
+GI_FreeTags(int tag)
+{
+	if ((tag > USHRT_MAX) || (tag <= 0))
+	{
+		Com_Printf("%s: tag outside [1, 65535]: %i\n",
+			__func__, tag);
+
+		return;
+	}
+
+	Z_FreeTags((unsigned short)tag);
 }
 
 void
@@ -475,7 +498,7 @@ SV_InitGameProgs(void)
 
 	import.TagMalloc = GI_TagMalloc;
 	import.TagFree = Z_Free;
-	import.FreeTags = Z_FreeTags;
+	import.FreeTags = GI_FreeTags;
 
 	import.cvar = Cvar_Get;
 	import.cvar_set = Cvar_Set;
