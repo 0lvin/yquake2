@@ -30,9 +30,9 @@
 typedef struct zhead_s
 {
 	struct zhead_s	*prev, *next;
+	size_t	size;
 	short	magic;
 	short	tag; /* for group free */
-	int		size;
 } zhead_t;
 
 void Z_Stats_f (void);

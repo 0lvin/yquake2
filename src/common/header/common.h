@@ -811,10 +811,10 @@ extern int time_after_ref;
 
 void Z_Init(void);
 void Z_Free(void *ptr);
-void *Z_Malloc(int size);           /* returns 0 filled memory */
-void *Z_TagMalloc(int size, int tag);
-void *Z_Realloc(void *ptr, int size);
-void *Z_TagRealloc(void *ptr, int size, int tag);
+void *Z_Malloc(size_t size);           /* returns 0 filled memory */
+void *Z_TagMalloc(size_t size, int tag);
+void *Z_Realloc(void *ptr, size_t size);
+void *Z_TagRealloc(void *ptr, size_t size, int tag);
 void Z_FreeTags(int tag);
 
 void Qcommon_Init(int argc, char **argv);

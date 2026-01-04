@@ -410,6 +410,19 @@ SV_ShutdownGameProgs(void)
 /*
  * Init the game subsystem for a new map
  */
+static void *
+GI_TagMalloc(int size, int tag)
+{
+	if (size < 0)
+	{
+		Com_Error(ERR_FATAL, "%s: size < 0: %i\n",
+			__func__, size);
+		return NULL;
+	}
+
+	return Z_TagMalloc(size, tag);
+}
+
 void
 SV_InitGameProgs(void)
 {
@@ -460,7 +473,7 @@ SV_InitGameProgs(void)
 	import.WriteDir = PF_WriteDir;
 	import.WriteAngle = PF_WriteAngle;
 
-	import.TagMalloc = Z_TagMalloc;
+	import.TagMalloc = GI_TagMalloc;
 	import.TagFree = Z_Free;
 	import.FreeTags = Z_FreeTags;
 
