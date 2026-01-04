@@ -809,13 +809,7 @@ extern int time_after_game;
 extern int time_before_ref;
 extern int time_after_ref;
 
-void Z_Init(void);
-void Z_Free(void *ptr);
-void *Z_Malloc(size_t size);           /* returns 0 filled memory */
-void *Z_TagMalloc(size_t size, unsigned short tag);
-void *Z_Realloc(void *ptr, size_t size);
-void *Z_TagRealloc(void *ptr, size_t size, unsigned short tag);
-void Z_FreeTags(unsigned short tag);
+#include "zone.h"
 
 void Qcommon_Init(int argc, char **argv);
 void Qcommon_ExecConfigs(qboolean addEarlyCmds);

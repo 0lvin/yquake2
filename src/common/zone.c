@@ -25,10 +25,17 @@
  */
 
 #include "header/common.h"
-#include "header/zone.h"
 #include <limits.h>
 
 #define Z_MAGIC 0x1d1d
+
+typedef struct zhead_s
+{
+	struct zhead_s *prev, *next;
+	size_t size;
+	unsigned short magic;
+	unsigned short tag; /* for group free */
+} zhead_t;
 
 static zhead_t z_chain;
 static size_t z_count, z_bytes;
