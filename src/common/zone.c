@@ -26,6 +26,7 @@
 
 #include "header/common.h"
 #include <limits.h>
+#include <stdint.h>
 
 #define Z_MAGIC 0x1d1d
 
