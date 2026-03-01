@@ -544,7 +544,7 @@ CL_PingServers_f(void)
 	}
 
 	/* send a packet to each address book entry */
-	for (i = 0; i < 16; i++)
+	for (i = 0; i < NUM_ADDRESSBOOK_ENTRIES; i++)
 	{
 		Com_sprintf(name, sizeof(name), "adr%i", i);
 		adrstring = Cvar_VariableString(name);
