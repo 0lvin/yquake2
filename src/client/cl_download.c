@@ -601,7 +601,7 @@ CL_CheckOrDownloadFile(const char *filename)
 	char *ptr;
 
 	/* fix backslashes - this is mostly für UNIX comaptiblity */
-	while ((ptr = strchr(filename, '\\')))
+	while ((ptr = (char *)strchr(filename, '\\')))
 	{
 		*ptr = '/';
 	}
