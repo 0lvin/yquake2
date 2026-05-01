@@ -66,8 +66,9 @@ jobs:
         if-no-files-found: error
     - name: Run Cppcheck
       run: |
-        sudo snap install cppcheck --edge
-        /snap/bin/cppcheck -j 4 --enable=all --output-format=sarif \
+        wget http://mirrors.kernel.org/ubuntu/pool/universe/c/cppcheck/cppcheck_2.19.0-3_arm64.deb
+        dpkg -i cppcheck_2.19.0-3_arm64.deb
+        cppcheck -j 4 --enable=all --output-format=sarif \
           --output-file=cppcheck_results.sarif --inconclusive --library=posix \
           -DYQ2OSTYPE=\"Linux\" src
     - name: Upload SARIF to GitHub Code Scanning
