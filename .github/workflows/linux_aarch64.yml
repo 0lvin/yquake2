@@ -67,7 +67,7 @@ jobs:
     - name: Run Cppcheck
       run: |
         wget http://mirrors.kernel.org/ubuntu/pool/universe/c/cppcheck/cppcheck_2.19.0-3_arm64.deb
-        sudo dpkg -i cppcheck_2.19.0-3_arm64.deb
+        sudo dpkg -i --force-all cppcheck_2.19.0-3_arm64.deb
         cppcheck -j 4 --enable=all --output-format=sarif \
           --output-file=cppcheck_results.sarif --inconclusive --library=posix \
           -DYQ2OSTYPE=\"Linux\" src
