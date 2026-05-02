@@ -17,7 +17,7 @@ jobs:
   build_ubuntu_aarch64:
     runs-on: ubuntu-latest
     container:
-      image: debian:testing  # Specifies the Debian Testing image
+      image: debian:testing
     permissions:
       actions: read
       contents: read
