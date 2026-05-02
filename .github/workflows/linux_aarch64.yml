@@ -30,8 +30,8 @@ jobs:
     steps:
     - name: Install build dependencies
       run: |
-        sudo apt update
-        sudo apt install libgl1-mesa-dev libsdl2-dev libopenal-dev libcurl4-openssl-dev \
+        apt update
+        apt install libgl1-mesa-dev libsdl2-dev libopenal-dev libcurl4-openssl-dev \
             build-essential cppcheck
     - name: Check out repository code
       uses: actions/checkout@v6
