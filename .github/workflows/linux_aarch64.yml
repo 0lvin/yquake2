@@ -15,7 +15,9 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build_ubuntu_aarch64:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
+    container:
+      image: debian:testing  # Specifies the Debian Testing image
     permissions:
       actions: read
       contents: read
@@ -30,7 +32,7 @@ jobs:
       run: |
         sudo apt update
         sudo apt install libgl1-mesa-dev libsdl2-dev libopenal-dev libcurl4-openssl-dev \
-            build-essential snapd
+            build-essential cppcheck
     - name: Check out repository code
       uses: actions/checkout@v6
     - name: Build
@@ -66,8 +68,6 @@ jobs:
         if-no-files-found: error
     - name: Run Cppcheck
       run: |
-        wget http://mirrors.kernel.org/ubuntu/pool/universe/c/cppcheck/cppcheck_2.19.0-3_arm64.deb
-        sudo dpkg -i --force-all cppcheck_2.19.0-3_arm64.deb
         cppcheck -j 4 --enable=all --output-format=sarif \
           --output-file=cppcheck_results.sarif --inconclusive --library=posix \
           -DYQ2OSTYPE=\"Linux\" src
