@@ -593,7 +593,6 @@ WriteMmove(FILE *f, const mmove_t *mm)
 static void
 WriteField2(FILE *f, const field_t *field, byte *base)
 {
-	size_t len;
 	void *p;
 
 	if (field->flags & FFL_SPAWNTEMP)
@@ -609,6 +608,8 @@ WriteField2(FILE *f, const field_t *field, byte *base)
 
 			if (*(char **)p)
 			{
+				size_t len;
+
 				len = strlen(*(char **)p) + 1;
 				sg_fwrite(*(char **)p, len, f);
 			}
@@ -1189,7 +1190,6 @@ void
 WriteLevel(const char *filename)
 {
 	int i;
-	edict_t *ent;
 	FILE *f;
 
 	f = Q_fopen(filename, "wb");
@@ -1210,6 +1210,8 @@ WriteLevel(const char *filename)
 	/* write out all the entities */
 	for (i = 0; i < globals.num_edicts; i++)
 	{
+		edict_t *ent;
+
 		ent = &g_edicts[i];
 
 		if (!ent->inuse)
