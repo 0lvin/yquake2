@@ -671,3 +671,66 @@ R_FindPic(const char *name, findimage_t find_image)
 
 	return image;
 }
+
+unsigned *
+R_Convert8to32(const byte *data, size_t width, size_t height, const unsigned *table_8to24)
+{
+	unsigned *trans;
+	size_t i, s;
+
+	if (height == 0 || width > INT_MAX / sizeof(*trans) / height)
+	{
+		Com_Error(ERR_DROP, "%s: invalid dimensions", __func__);
+		return NULL;
+	}
+
+	s = width * height;
+
+	trans = malloc(s * sizeof(unsigned));
+	YQ2_COM_CHECK_OOM(trans, "malloc()",
+		s * sizeof(unsigned))
+	if (!trans)
+	{
+		/* unaware about YQ2_ATTR_NORETURN_FUNCPTR? */
+		return NULL;
+	}
+
+	for (i = 0; i < s; i++)
+	{
+		byte p = data[i];
+		trans[i] = table_8to24[p];
+
+		/* transparent, so scan around for
+		   another color to avoid alpha fringes */
+		if (p == 255)
+		{
+			if ((i > width) && (data[i - width] != 255))
+			{
+				p = data[i - width];
+			}
+			else if ((i < s - width) && (data[i + width] != 255))
+			{
+				p = data[i + width];
+			}
+			else if ((i > 0) && (data[i - 1] != 255))
+			{
+				p = data[i - 1];
+			}
+			else if ((i < s - 1) && (data[i + 1] != 255))
+			{
+				p = data[i + 1];
+			}
+			else
+			{
+				p = 0;
+			}
+
+			/* copy rgb components */
+			((byte *)&trans[i])[0] = ((byte *)&table_8to24[p])[0];
+			((byte *)&trans[i])[1] = ((byte *)&table_8to24[p])[1];
+			((byte *)&trans[i])[2] = ((byte *)&table_8to24[p])[2];
+		}
+	}
+
+	return trans;
+}

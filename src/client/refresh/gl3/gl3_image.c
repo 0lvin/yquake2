@@ -238,49 +238,18 @@ GL3_Upload32(unsigned *data, int width, int height, qboolean mipmap)
  * Returns has_alpha
  */
 static qboolean
-GL3_Upload8(byte *data, int width, int height, qboolean mipmap, qboolean is_sky)
+GL3_Upload8(const byte *data, size_t width, size_t height, qboolean mipmap)
 {
-	int s = width * height;
-	unsigned *trans = malloc(s * sizeof(unsigned));
+	unsigned *trans = NULL;
+	qboolean ret;
 
-	for (int i = 0; i < s; i++)
+	trans = R_Convert8to32(data, width, height, d_8to24table);
+	if (!trans)
 	{
-		int p = data[i];
-		trans[i] = d_8to24table[p];
-
-		/* transparent, so scan around for
-		   another color to avoid alpha fringes */
-		if (p == 255)
-		{
-			if ((i > width) && (data[i - width] != 255))
-			{
-				p = data[i - width];
-			}
-			else if ((i < s - width) && (data[i + width] != 255))
-			{
-				p = data[i + width];
-			}
-			else if ((i > 0) && (data[i - 1] != 255))
-			{
-				p = data[i - 1];
-			}
-			else if ((i < s - 1) && (data[i + 1] != 255))
-			{
-				p = data[i + 1];
-			}
-			else
-			{
-				p = 0;
-			}
-
-			/* copy rgb components */
-			((byte *)&trans[i])[0] = ((byte *)&d_8to24table[p])[0];
-			((byte *)&trans[i])[1] = ((byte *)&d_8to24table[p])[1];
-			((byte *)&trans[i])[2] = ((byte *)&d_8to24table[p])[2];
-		}
+		return false;
 	}
 
-	qboolean ret = GL3_Upload32(trans, width, height, mipmap);
+	ret = GL3_Upload32(trans, width, height, mipmap);
 	free(trans);
 	return ret;
 }
@@ -499,15 +468,13 @@ GL3_LoadPic(char *name, byte *pic, int width, int realwidth,
 			}
 
 			image->has_alpha = GL3_Upload8(image_converted, width * scale, height * scale,
-						(image->type != it_pic && image->type != it_sky),
-						image->type == it_sky);
+						(image->type != it_pic && image->type != it_sky));
 			free(image_converted);
 		}
 		else
 		{
 			image->has_alpha = GL3_Upload8(pic, width, height,
-						(image->type != it_pic && image->type != it_sky),
-						image->type == it_sky);
+						(image->type != it_pic && image->type != it_sky));
 		}
 	}
 	else

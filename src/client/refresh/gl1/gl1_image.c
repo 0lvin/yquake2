@@ -855,6 +855,12 @@ R_Upload32(unsigned *data, size_t width, size_t height, qboolean mipmap)
 {
 	qboolean res;
 
+	/* optimize 8bit images only when we forced such logic */
+	if (r_scale8bittextures->value)
+	{
+		SmoothColorImage(data, width * height, width);
+	}
+
 	if (gl_config.npottextures)
 	{
 		res = R_Upload32Native(data, width, height, mipmap);
@@ -890,8 +896,6 @@ R_Upload32(unsigned *data, size_t width, size_t height, qboolean mipmap)
 qboolean
 R_Upload8(byte *data, int width, int height, qboolean mipmap, qboolean is_sky)
 {
-	int s = width * height;
-
 	if (gl_config.palettedtexture && is_sky)
 	{
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT,
@@ -905,46 +909,16 @@ R_Upload8(byte *data, int width, int height, qboolean mipmap, qboolean is_sky)
 	}
 	else
 	{
-		unsigned *trans = malloc(s * sizeof(unsigned));
+		unsigned *trans = NULL;
+		qboolean ret;
 
-		for (int i = 0; i < s; i++)
+		trans = R_Convert8to32(data, width, height, d_8to24table);
+		if (!trans)
 		{
-			int p = data[i];
-			trans[i] = d_8to24table[p];
-
-			/* transparent, so scan around for
-			   another color to avoid alpha fringes */
-			if (p == 255)
-			{
-				if ((i > width) && (data[i - width] != 255))
-				{
-					p = data[i - width];
-				}
-				else if ((i < s - width) && (data[i + width] != 255))
-				{
-					p = data[i + width];
-				}
-				else if ((i > 0) && (data[i - 1] != 255))
-				{
-					p = data[i - 1];
-				}
-				else if ((i < s - 1) && (data[i + 1] != 255))
-				{
-					p = data[i + 1];
-				}
-				else
-				{
-					p = 0;
-				}
-
-				/* copy rgb components */
-				((byte *)&trans[i])[0] = ((byte *)&d_8to24table[p])[0];
-				((byte *)&trans[i])[1] = ((byte *)&d_8to24table[p])[1];
-				((byte *)&trans[i])[2] = ((byte *)&d_8to24table[p])[2];
-			}
+			return false;
 		}
 
-		qboolean ret = R_Upload32(trans, width, height, mipmap);
+		ret = R_Upload32(trans, width, height, mipmap);
 		free(trans);
 		return ret;
 	}
