@@ -33,18 +33,17 @@ extern qboolean scrap_dirty;
 extern byte scrap_texels[MAX_SCRAPS][SCRAP_WIDTH * SCRAP_HEIGHT];
 
 static byte intensitytable[256];
-unsigned char gammatable[256];
+byte gammatable[256];
 
 static cvar_t *intensity;
 
 unsigned d_8to24table[256];
 
 extern cvar_t *gl1_minlight;
-extern unsigned char minlight[256];
+extern byte minlight[256];
 
 qboolean R_Upload8(byte *data, int width, int height,
 		qboolean mipmap, qboolean is_sky);
-qboolean R_Upload32(unsigned *data, int width, int height, qboolean mipmap);
 
 #define Q2_GL_SOLID_FORMAT GL_RGB
 #define Q2_GL_ALPHA_FORMAT GL_RGBA
@@ -154,7 +153,7 @@ R_SetTexturePalette(const unsigned palette[256])
 {
 	if (gl_config.palettedtexture)
 	{
-		unsigned char temptable[768];
+		byte temptable[768];
 		int i;
 
 		for (i = 0; i < 256; i++)
@@ -286,7 +285,7 @@ R_TextureMode(const char *string)
 
 	if (i == NUM_GL_MODES)
 	{
-		Com_Printf("bad filter name\n");
+		Com_Printf("bad filter name '%s'\n", string);
 		return;
 	}
 
@@ -318,9 +317,9 @@ R_TextureMode(const char *string)
 		if (unfiltered2D && glt->type == it_pic)
 		{
 			// exception to that exception: stuff on the r_lerp_list
-			nolerp = (lerplist== NULL) || (strstr(lerplist, glt->name) == NULL);
+			nolerp = (lerplist == NULL) || (strstr(lerplist, glt->name) == NULL);
 		}
-		else if(nolerplist != NULL && strstr(nolerplist, glt->name) != NULL)
+		else if (nolerplist != NULL && strstr(nolerplist, glt->name) != NULL)
 		{
 			nolerp = true;
 		}
@@ -409,8 +408,8 @@ void
 R_ImageList_f(void)
 {
 	int i, used, texels;
+	qboolean freeup;
 	image_t *image;
-	qboolean	freeup;
 	const char *palstrings[2] = {
 		"RGB",
 		"PAL"
@@ -422,7 +421,9 @@ R_ImageList_f(void)
 
 	for (i = 0, image = gltextures; i < numgltextures; i++, image++)
 	{
-		char *in_use = "";
+		int w, h;
+		const char *in_use = "";
+		char isScrap = image->scrap ? 'S' : ' ';
 
 		if (image->texnum <= 0)
 		{
@@ -435,29 +436,37 @@ R_ImageList_f(void)
 			used++;
 		}
 
-		texels += image->upload_width * image->upload_height;
+		w = image->upload_width;
+		h = image->upload_height;
+
+		texels += w * h;
+
+		char imageType = '?';
 
 		switch (image->type)
 		{
 			case it_skin:
-				Com_Printf("M");
+				imageType = 'M';
 				break;
 			case it_sprite:
-				Com_Printf("S");
+				imageType = 'S';
 				break;
 			case it_wall:
-				Com_Printf("W");
+				imageType = 'W';
 				break;
 			case it_pic:
-				Com_Printf("P");
+				imageType = 'P';
+				break;
+			case it_sky:
+				imageType = 'Y';
 				break;
 			default:
-				Com_Printf(" ");
+				imageType = '?';
 				break;
 		}
 
-		Com_Printf(" %3i %3i %s: %s (%dx%d) %s\n",
-				image->upload_width, image->upload_height,
+		Com_Printf("%c%c %3i %3i %s: %s (%dx%d) %s\n",
+				isScrap, imageType, image->upload_width, image->upload_height,
 				palstrings[image->paletted], image->name,
 				image->width, image->height, in_use);
 	}
@@ -465,7 +474,8 @@ R_ImageList_f(void)
 	Com_Printf("Total texel count (not counting mipmaps): %i\n",
 			texels);
 	freeup = R_ImageHasFreeSpace();
-	Com_Printf("Used %d of %d images%s.\n", used, image_max, freeup ? ", has free space" : "");
+	Com_Printf("Used %d of %d / %d images%s.\n",
+		used, image_max, MAX_GLTEXTURES, freeup ? ", has free space" : "");
 }
 
 /*
@@ -604,7 +614,7 @@ R_MipMap(byte *in, int width, int height)
  * Returns has_alpha
  */
 static void
-R_BuildPalettedTexture(unsigned char *paletted_texture, unsigned char *scaled,
+R_BuildPalettedTexture(byte *paletted_texture, byte *scaled,
 		int scaled_width, int scaled_height)
 {
 	int i;
@@ -626,7 +636,7 @@ R_BuildPalettedTexture(unsigned char *paletted_texture, unsigned char *scaled,
 }
 
 static qboolean
-R_Upload32Native(unsigned *data, int width, int height, qboolean mipmap)
+R_Upload32Native(unsigned *data, size_t width, size_t height, qboolean mipmap)
 {
 	// This is for GL 2.x so no palettes, no scaling, no messing around with the data here. :)
 	int samples;
@@ -662,11 +672,11 @@ R_Upload32Native(unsigned *data, int width, int height, qboolean mipmap)
 
 
 static qboolean
-R_Upload32Soft(unsigned *data, int width, int height, qboolean mipmap)
+R_Upload32Soft(unsigned *data, size_t width, size_t height, qboolean mipmap)
 {
 	int samples;
 	unsigned scaled[256 * 256];
-	unsigned char paletted_texture[256 * 256];
+	byte paletted_texture[256 * 256];
 	int scaled_width, scaled_height;
 	int i, c;
 	byte *scan;
@@ -723,6 +733,7 @@ R_Upload32Soft(unsigned *data, int width, int height, qboolean mipmap)
 	{
 		// this can't really happen (because they're clamped to 256 above), but whatever
 		Com_Error(ERR_DROP, "%s: too big", __func__);
+		return false;
 	}
 
 	/* scan the texture for any non-255 alpha */
@@ -749,7 +760,7 @@ R_Upload32Soft(unsigned *data, int width, int height, qboolean mipmap)
 				(samples == Q2_GL_SOLID_FORMAT))
 			{
 				uploaded_paletted = true;
-				R_BuildPalettedTexture(paletted_texture, (unsigned char *)data,
+				R_BuildPalettedTexture(paletted_texture, (byte *)data,
 						scaled_width, scaled_height);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT,
 						scaled_width, scaled_height, 0, GL_COLOR_INDEX,
@@ -779,7 +790,7 @@ R_Upload32Soft(unsigned *data, int width, int height, qboolean mipmap)
 		(samples == Q2_GL_SOLID_FORMAT))
 	{
 		uploaded_paletted = true;
-		R_BuildPalettedTexture(paletted_texture, (unsigned char *)scaled,
+		R_BuildPalettedTexture(paletted_texture, (byte *)scaled,
 				scaled_width, scaled_height);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT,
 				scaled_width, scaled_height, 0, GL_COLOR_INDEX,
@@ -820,7 +831,7 @@ R_Upload32Soft(unsigned *data, int width, int height, qboolean mipmap)
 				(samples == Q2_GL_SOLID_FORMAT))
 			{
 				uploaded_paletted = true;
-				R_BuildPalettedTexture(paletted_texture, (unsigned char *)scaled,
+				R_BuildPalettedTexture(paletted_texture, (byte *)scaled,
 						scaled_width, scaled_height);
 				glTexImage2D(GL_TEXTURE_2D, miplevel, GL_COLOR_INDEX8_EXT,
 						scaled_width, scaled_height, 0, GL_COLOR_INDEX,
@@ -840,7 +851,7 @@ done:
 }
 
 qboolean
-R_Upload32(unsigned *data, int width, int height, qboolean mipmap)
+R_Upload32(unsigned *data, size_t width, size_t height, qboolean mipmap)
 {
 	qboolean res;
 
@@ -869,9 +880,9 @@ R_Upload32(unsigned *data, int width, int height, qboolean mipmap)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT,
 				Q_max(gl_anisotropic->value, 1.f));
 	}
+
 	return res;
 }
-
 
 /*
  * Returns has_alpha
@@ -985,6 +996,7 @@ R_LoadPic(const char *name, byte *pic, int width, int realwidth,
 	if (strlen(name) >= sizeof(image->name))
 	{
 		Com_Error(ERR_DROP, "%s: \"%s\" is too long", __func__, name);
+		return NULL;
 	}
 
 	strcpy(image->name, name);
@@ -1201,13 +1213,13 @@ R_FindImage(const char *originname, imagetype_t type)
 		}
 	}
 
-	//
-	// load the pic from disk
-	//
+	/*
+	 * load the pic from disk
+	 */
 	image = (image_t *)R_LoadImage(name, namewe, ext, type,
 		r_retexturing->value, (loadimage_t)R_LoadPic);
 
-	if (!image && r_validation->value)
+	if (!image && r_validation->value > 0)
 	{
 		Com_Printf("%s: can't load %s\n", __func__, name);
 	}
@@ -1229,8 +1241,8 @@ RI_RegisterSkin(const char *name)
 void
 R_FreeUnusedImages(void)
 {
-	int i;
 	image_t *image;
+	size_t i;
 
 	/* never free r_notexture or particle texture */
 	r_notexture->registration_sequence = registration_sequence;
